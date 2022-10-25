@@ -1,0 +1,28 @@
+#
+# Radix-512 Divider Benchmark
+#
+# c-shell interface to make_tv (easier files handling)
+#
+# Alberto Nannarelli       e-mail: alberto@ece.uci.edu
+# University of California, Irvine           
+#
+# April 8, 1994
+#
+
+if ($#argv < 1) then
+  echo ""; echo " no filename given!"; echo "";
+  exit
+endif
+
+if (-e $1) then
+  echo ""; echo " ... processing " $1; echo "";
+  set i=($1:r)
+  if (-e $i.vhdl) then
+     echo -n " FILE "$i.vhdl" EXISTS. Overwrite it ? (y/n) "
+     set tmp=($<); set tmp=($tmp)
+     if ($tmp != "y") exit
+  endif
+  ./make_tv $1 > $i.vhdl
+else
+  echo ""; echo $1" file not found"; echo "";
+endif

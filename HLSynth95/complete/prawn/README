@@ -1,0 +1,80 @@
+--------------------------------------------------------------------------------
+--
+--   Prawn CPU Benchmark : README 
+--
+-- Derived from
+--           Parwan : a reduced processor
+--           from Chapter 9 of NAVABI : "VHDL: Analysis and Modeling of
+--           Digital Systems" McGraw-Hill,Inc. 1993
+--
+-- Author: Tadatoshi Ishii
+--         Information and Computer Science,
+--         University Of California, Irvine, CA 92717
+--
+-- Developed on Nov 1, 1992
+--
+--------------------------------------------------------------------------------
+
+THIS DIRECTORY HAS THE FOLLOWING FILES :
+
+
+prawn.doc           :  This file contains a brief description of the
+                       Prawn CPU, and the testing strategy for the VHDL model.
+
+cpu.vhdl            :  This file contains VHDL model of Prawn CPU.
+
+types.vhdl          :  This file contains some VHDL types and functions 
+                       used in the models. These are the public domain MVL7
+                       functions.
+
+MVL7_functions.vhdl :  This file contains some VHDL functions used in the
+		       models. 
+
+lib.vhdl            :  This file contains some VHDL constants, subtypes,
+                       and functions used in the models.
+
+tst*.vhdl           :  These files contain the VHDL (translated) test vectors
+		       for the models of Prawn.  The test vectors are
+		       contents of memory inside a VHDL process.
+
+mem.vhdl            :  This file is a copy of one of "tst*.vhdl" files
+		       used in current simulation. 
+
+sim.vhdl	    :  In order to simulate Prawn CPU on any simulator, the
+		       CPU model and memory model for test are instantiated
+		       in this file as a component.
+
+cmd.i               :  This is a command file used by the ZYCAD simulator 
+                       ( Version 1.0a) while running the test vectors on any of
+                       the models.
+
+Makefile            :  This file contains the command for "make" command
+                       which is used to execute the analysis and simulation
+		       with the ZYCAD VHDL Simulator. (You can substitute
+		       your own VHDL simulator's respective compilation 
+		       commands.)
+             
+
+******************************************************************************
+
+ RUNNING THE TEST VECTORS ON THE MODELS USING THE ZYCAD SIMULATOR:
+
+******************************************************************************
+
+ **** Running whole set of test_vectors on the Prawn CPU ****
+
+ If you do not make your own test vectors, start from 3)
+
+1) Make your memory model file "tst*.vhdl" 
+
+2) Edit Makefile to add the code for "tst*.vhdl" which you made.
+
+3) "make"
+
+4) The simulation results will be moved in a file called "tst*.rst", if you
+   edit Makefile correctly. If there is no error, "Assert" statements will
+   appear in this file with ERROR level, mentioning the simulation is done
+   successfully. If there are any errors, "Assert" statements will appear
+   in this file with FAILURE level and/or NOTE level, mentioning which
+   check point found the error.
+         

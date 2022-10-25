@@ -1,0 +1,43 @@
+
+
+--------------------------------------------------------------
+--                                                          
+--        The Fifth Order Elliptical Wave Filter           
+--                                                          
+-- Author : D. Sreenivasa Rao
+--          University of California, Irvine, CA, 92717.
+--          dsr@balboa.eng.uci.edu, (714)856-5106
+--
+-- Written 12 September, 1992.
+--
+--------------------------------------------------------------
+
+The elliptic filter has been used as a benchmark for many architectural
+synthesis packages, and is a part of the high-level synthesis benchmark
+suite. The elliptic filter belongs to the class of 
+Infinite Impulse Response (IIR) filters, because its response to an  
+impulse input remains non-zero till infinite time in a theoretical sense.
+The particular filter we deal with here is a low pass filter, meaning 
+that it filters off frequencies higher than a certain limit, called the 
+cut-off frequency.
+
+The elliptic filter is an improved form of the Chebyshev filter, in which
+the response function is chosen to be of the form similar to the well 
+known elliptic function. This filter distributes the passband ripple
+over the passband and the stopband, while retaining the transition
+characteristics of the Chebyshev filter. This feature has made elliptic
+filters extremely attractive for practical use, although it is
+significantly more complicated than the other filters. The Jacobian
+Elliptic functions, which define the response of this class of filters
+are considered to be solutions of a set of nonlinear, second order 
+differential equations, expressed in terms of specially defined 
+Jacobian Elliptic sine and cosine functions. A fairly complicated 
+procedure as described in [1] can be used to obtain the order of the 
+filter and other essential parameters, given the response characteristic 
+of the desired filter in terms of the passband ripple, stopband ripple, 
+and the transition band width.
+
+
+[1] C. W. Parks and J. Burrus : Digital Filter Theory and Design.
+
+

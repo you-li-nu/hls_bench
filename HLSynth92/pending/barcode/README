@@ -1,0 +1,62 @@
+
+
+		BARCODE Benchmark for High-Level Synthesis
+		==========================================
+
+               Michael Pilsl, Siemens AG, Munich, Germany
+                       (pilsl@sabine.zfe.siemens.de)
+           Subhrajit Bhattacharya, Duke University, Durham, NC
+                       (sb@cs.duke.edu, sb@mcnc.org)
+             Franc Brglez, MCNC, Research Triangle Park, NC
+                            (brglez@mcnc.org)
+
+This directory contains the design files for the BARCODE chip.
+
+The barcode chip is part of a circuit for reading barcodes
+at shops. 
+
+A description of the files included in this directory follows.
+
+- "barcode.vhdl"
+	contains the vhdl description of the function of the 
+	chip.
+
+- "barcode_stim.vhdl"
+	contains the vhdl description needed for (partial)
+	simulation of the design.
+
+- "waves.ps.1"
+	contains the waveforms resulting from simulating the
+	scheduled vhdl description. When the signal consists
+	of a more than one bit, then the value (decimal) is indicated
+    	between parallel lines whenever possible. The file is
+	in postscript.
+
+- "waves.ps.2"
+	is a zoom of the initial part of waves.ps.1 . The file is
+	in postscript.
+
+- "barcode.io"
+	this file is a more english like description of
+	the inputs and the way the outputs change with
+	the inputs. A ".I" indicates an input and a ".O"
+	indicates an output. It should be noted that in
+	several places one has been asked "to iterate 
+	till ..." . Given the VHDL description without
+	any IO constraints, one will come up with schedules
+	which needs different number of clock ticks (time
+	steps) to do the same sequence of operations. We have 
+	tried to impose the minimum amount of constraint by
+	asking "to iterate till ...". We suggest one go
+	through their implementation of the schedule till
+	the outputs reach the values specified. If the
+	specified values are not reached, there is a bug
+	somewhere.
+
+Additional information about this benchmark and a new data point at
+register-, gate- and transistor-level for this design can be obtained from
+
+Subhrajit Bhattacharya, Franc Brglez and Michael Pilsl,
+"Synthesis for Testability from Behavioral Specifications: 
+Benchmarking  the Scheduling Strategies", 
+MCNC Technical Report, June 1993.

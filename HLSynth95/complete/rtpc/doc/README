@@ -1,0 +1,43 @@
+--------------------------------------------------------------------------------
+--
+-- RTPC CPU Benchmark :
+--	Documentation Readme file
+--
+-- Derived from
+--	ROMP description written in verilog by Edward Czeck et al.
+--	Most likely based on the IBM RT-PC Hardware Technical
+--	Reference (c) 1985 (for RT PC model 10, 20, and 25)
+--
+-- Authors:
+--	Alfred B. Thordarson (abth@ece.uci.edu)
+--	and
+--	Nikil Dutt, professor of CS and ECE
+--	University Of California, Irvine, CA 92717
+--
+-- Changes:
+--	Dec 1, 1993: File created by Alfred B. Thordarson
+--
+--------------------------------------------------------------------------------
+
+THIS DIRECTORY HOLDS THE FOLLOWING FILES:
+========================================
+
+README		This file
+
+rtpc.doc	Documentation of the model
+demo.asm	Demo Program used in documentation
+
+--------------------------------------------------------------------------------
+
+SIZE OF THIS BENCHMARK:
+=======================
+
+1612 lines in Rasm-assembly-files
+ 436 lines in C-source-files
+3541 lines in VHDL-source-files
+1057 lines in Documentation-files
+ 194 lines in Control-files (makefile, cmd.inc and rasm.instr)
+----
+6840 lines total for RTPC-Benchmark
+   +
+   1 file of demo.asm (which is used in rtpc.doc)

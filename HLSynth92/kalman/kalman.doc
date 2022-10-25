@@ -1,0 +1,40 @@
+--------------------------------------------------------------------------------
+--
+--   Kalman Filter Benchmark
+--
+-- Source:  The model, test patterns and part of the documentation
+--          were obtained from Cleland O Newton at DRA Malvern, UK.
+--
+-- author: Champaka Ramachandran
+--         University Of California, Irvine, CA 92717
+--         champaka@balboa.eng.uci.edu
+--
+-- Written on Aug 24th, 92
+--
+--------------------------------------------------------------------------------
+
+-----------------
+Functionality :
+-----------------
+The purpose of the Kalman filter is to predict the state vector of a system
+from a set of observed quantities. The dimensionality of the state vector is
+larger than that of the measurements. The imbalance is remedied by using 
+many successive data observations in the prediction process.
+
+The operation of the kalman filter chip is as follows:  First a set
+of coefficent matrices is downloaded into the chip.  Once this is
+completed, the chip enters its control loop.  Within this loop, four
+steps are repeated indefinitely.  First, 13 measurements "y" are read
+into the chip.  Second, the state vector "x" (of dimension 16) is
+estimated.  This involves multiplication by a 16x16 matrix,
+multiplication by a 16x13 matrix, and numerical integration using the
+previous state estimate.  Third, the control output vector "v" (of
+dimension 4) is computed from the state estimate.  This involves
+multiplication by a 4x16 matrix.  Fourth, the control vector "v" is
+output from the chip.
+
+The kalman filter requires negative numbers to control its feedback. The
+highest negative number is two to the fifteen. Also, coefficients below
+unity are required to ensure that feedback does not cause the numbers 
+to blow up. Hence, all inputs numbers have been multiplied by 1024, 
+that is pitched 10 binary places above unity. 

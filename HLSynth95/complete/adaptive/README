@@ -1,0 +1,48 @@
+This is the adaptive interpolator written by Koen Van Nieuwenhove.
+
+Look in  adintpol_v8.sil for more information about the algorithm.
+Shortly, this algoritm recovers a signal that contains a burst.
+
+The description can be simulated with a program "s2c" (Silage to C).
+To obtain "s2c" contact Mr. Gert Goossens (email : goossens@imec.be) or
+Joost Deseure (email : deseure@imec.be).
+
+
+adintpol_v8.sil : contains the Silage description
+adintpol_v8.com : describes the names of the inputfile and
+		  the signal that are displayed.
+
+examples : a directory with input and output stimuli
+
+
+To obtain simulation results :
+
+1) Put the input files in this directory :
+
+   prompt> ln -s examples/example1/Inp.s .
+   prompt> ln -s examples/example1/Inp.m .
+   prompt> ln -s examples/example1/Inp.t .
+
+2) Compile adintpol_v8.sil with s2c :
+  
+   prompt> s2c -m adintpol_v8
+   prompt> make bit
+   s2c -f adintpol_v8
+   Parsing.
+   Signal Flow Graph Construction.
+   Manifest Bounds Calculation.
+   Type Deduction.
+   Conditional delay check.
+   Symbolic Simulation.
+   Checking of the delay's.
+   Process Partitioning.
+   Code Generation.
+   Compilation Finished.
+   cc -w -DBITTRUE -DDETOV -I//poseidon/usr/users/cad/cad/include/s2c adintpol_v8.c //poseidon/usr/users/cad/cad/lib/SR10lib/BIT.a -lm -o adintpol_v8B
+
+3) Simulate :
+
+   prompt> adintpol_v8B > Out.trunc
+
+
+Lode Nachtergaele (email : nachterg@imec.be)

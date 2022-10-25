@@ -1,0 +1,10 @@
+This directory contains the following files:
+
+README			This file
+make_test		c-shell script to run make_tv
+make_tv			sparc executable
+make_tv.c		c source code for make_tv
+make_tv.doc		documentation notes for make_tv
+test_vectors.bit	example of configuratio file for make_tv
+test_vectors.vhdl	output of make_test for test_vectors.bit
+

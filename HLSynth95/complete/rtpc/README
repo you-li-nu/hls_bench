@@ -1,0 +1,96 @@
+--------------------------------------------------------------------------------
+--
+-- RTPC CPU Benchmark :
+--	Readme file
+--
+-- Derived from
+--	ROMP description written in verilog by Edward Czeck et al.
+--	Most likely based on the IBM RT-PC Hardware Technical
+--	Reference (c) 1985 (for RT PC model 10, 20, and 25)
+--
+-- Authors:
+--	Alfred B. Thordarson (abth@ece.uci.edu)
+--	and
+--	Nikil Dutt, professor of CS and ECE
+--	University Of California, Irvine, CA 92717
+--
+-- Changes:
+--	Dec 1, 1993: File created by Alfred B. Thordarson
+--
+--------------------------------------------------------------------------------
+
+THIS DIRECTORY HOLDS THE FOLLOWING FILES:
+========================================
+
+README		This file
+
+.synopsys_...	Setup for synopsys
+
+doc		Documentation directory
+
+makefile	Makefile for make-utility (created with simdepends of SYNOPSYS)
+		(You can substitute your own VHDL simulator's compilation commands)
+
+cmd.inc		Input file for vhdlsim (of SYNOPSYS)
+
+program		Control and program to be executed by the model
+
+valid_ari.asm   Vectors to validate part of the RTPC-instruction set
+valid_jmp.asm   -"-
+valid_log.asm   -"-
+valid_mem.asm   -"-
+valid_mov.asm   -"-
+valid_msd.asm   -"-
+valid_trp.asm   -"-
+
+lib.vhd		Package-file
+control.vhd	VHDL models for blocks of the schematic
+memory.vhd	-"-
+rtpc.vhd	-"-
+system.vhd	-"-
+
+dump.asserts	Assertation encountered while simulating
+dump.errors	Errors in memory comparisons
+dump.memory	Memory contents instructed to be dumped
+dump.registers	Registers and condition-codes after running
+
+rasm		A simple assembler for the RTPC-model
+rasm.c		The C-code for the rasm-program
+rasm.instr	Available mnemonics, dec-opcodes, assembly-formats
+		and byte description for the assembler.
+
+--------------------------------------------------------------------------
+
+HOW TO RUN THE TESTING SYSTEM ON SYNOPSYS-SIMULATOR:
+======================================================
+
+	(i)	If the make-utility is available you can compile
+		the Pre-defined package file and the VHDL-models
+		simply by giving the command:
+			"make"
+		Then go to step (iii). If the make-utility is not
+		available you should compile the packages as step
+		(ii) explains.
+
+	(ii)	Compile the Pre-defined package file and
+		the VHDL models by typing 
+			"vhdlan lib.vhd"
+			"vhdlan control.vhd"
+			"vhdlan rtpc.vhd"
+			"vhdlan memory.vhd"
+			"vhdlan system.vhd"
+
+	(iii)	Compile the RTPC-assembler by typing
+			"cc -o rasm rasm.c"
+
+	(iv)	Choose a program to run on the model, lets say
+		"validate.asm". You assemble the file to the
+		"program"-file by typing
+			"rasm validate.asm"
+
+	(v)	Run the simulation by typing 
+			"vhdlsim -i cmd.inc system_cfg".
+         
+The simulation output will appear in the "dump.*"-files.
+If there are any errors in simulation, "Assert" statements 
+will appear in "dump.asserts", mentioning the error.

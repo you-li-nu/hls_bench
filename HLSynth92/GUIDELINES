@@ -1,0 +1,381 @@
+    Current Status of HLSW Benchmarks and Guidelines for Benchmark Submission
+    --------------------------------------------------------------------------
+
+		  Nik Dutt, U.C. Irvine
+		HLSW92 Benchmark Coordinator
+
+		Last Updated:   September 18, 1992.
+		First Created:  April 9, 1992.
+
+    Please send comments, corrections, suggestions and criticisms
+		    to "dutt@ics.uci.edu"
+
+
+-----------------------------------------------------------------------------
+			Contents
+			--------
+
+	1. Introduction
+
+	2. Comments on the old set of benchmarks (before 1992)
+
+	3. Guidelines for new benchmark submission
+
+	4. Status of new HLSW92 benchmarks
+
+	5. Brief history of HLSW benchmarking
+
+-----------------------------------------------------------------------------
+
+1. Introduction
+---------------
+
+Although the benchmarking effort for high-level synthesis has been alive
+and active for several years, the current (i.e., older than 1991) set of
+HLSW benchmarks are not very robust and lack the rigor associated with most
+benchmarking efforts.  This is certainly not intentional, and perhaps arose
+from our (i.e., the HLS community's) eagerness in trying to get as many
+examples into the HLSW benchmark set as possible.
+
+However, we have reached a point of maturity in HLS where several researchers
+use (or attempt to use) the benchmarks for comparative evaluation of their
+results.  These comparisons are often confusing and sometimes incorrect,
+due to the inherent ambiguity in the existing set of benchmarks.
+
+As part of HLSW92, we are attempting to rectify this situation by providing
+a set of guidelines for benchmark submission and use, together with some
+sample benchmarks that follow these guidelines.
+This document attempts to describe the status of the benchmarking effort
+prior to HLSW92 (Sec. 2), suggests some new guidelines for introducing more
+rigor into benchmarking for HLS (Sec. 3), and points to a new set of benchmark
+examples that follow these guidelines (Sec. 4).
+The document concludes with a brief history of the benchmarking effort
+for the past few High-Level Synthesis Workshops (Sec. 5).
+
+
+
+-----------------------------------------------------------------------------
+
+
+
+2.  (Old) Benchmarks for HLSW 1991
+----------------------------------
+
+The benchmarks for HLSW 1991 are currently available from MCNC under the
+directory labeled "HLSynth91".  The design descriptions vary in complexity,
+application, language, description style and scope.
+
+The following design descriptions comprise the benchmark set for HLSW 1991:
+
+	o Processors
+
+		mc6502 (ISPS)
+		mc68000 (ISPS)
+		frisc (Hdw-C)
+		mark-1 (ISPS)
+
+	o Peripheral/Glue Chips
+
+		i8251 (ISPS, Hdw-C)
+		Amiga BLIT (C)
+
+	o DSP Chips
+
+		fft (paper description)
+		pitch extraction (paper description)
+		Kalman filter (ISPS)
+		fifth-order elliptic filter (VHDL, Hdw-C)
+
+	o FSM Controllers and Small Examples
+
+		gcd (Hdw-C)
+		ecc (Hdw-C)
+		TLC (Hdw-C)
+		tseng (Hdw-C)
+		diffeq (Hdw-C)
+		daior (Hdw-C)
+		daiop (Hdw-C)
+
+The current benchmark set has several shortcomings which are described 
+below.
+
+2.1  Lack of Sufficient Documentation
+---------------------------------------
+
+Most of the designs have little or no documentation.  In addition to the
+HDL descriptions we need to have English descriptions of the functionality,
+comments in the HDL descriptions and pointers to the original source of
+information (e.g., data sheet).
+
+2.2  Lack of Simulation Vectors
+---------------------------------
+
+Except for some Hardware-C benchmarks, none of the HLSW benchmarks have any
+simulation vectors for inputs and expected outputs used to test typical
+behavioral sequences.  Some of the ISPS benchmarks may have been simulated
+before they were submitted, but unfortunately, the test vectors are not
+part of the benchmark set.  For the other descriptions, one can surmise that
+most of them have never been simulated or checked for behavioral correctness!
+
+As a result, the very behavior these models is in question (i.e., does the
+HDL description *really* describe the design?).  Furthermore, the lack of
+input and output simulation vectors for the behavioral descriptions
+implies that the outputs of synthesis tools on these examples may never
+have been simulated (or verified) for correctness.
+
+This is a serious deficiency in the current set of benchmarks, since most
+researchers take existing descriptions and adapt them (e.g., translate
+into another HDL or modify the description style) to suit specific tool
+requirements.  In the absence of a set of "sanity-check" test vectors, there
+is no mechanism to ensure the preservation of behavior for modified (or
+translated) design descriptions.  Furthermore, outputs of synthesis tools
+that have not been simulated for correct operational behavior are of 
+dubious value.
+
+2.3  Variety of HDLs and Formats
+----------------------------------
+
+The old set of benchmarks are written using a variety of HDLs.  In some
+instances, the benchmark is simply a "paper description" of a design.
+
+While the variance in HDLs cannot be avoided, it is preferable for the
+benchmarks to be written in "well-known", robust HDLs (e.g., VHDL or Verilog)
+which have publicly available reference manuals and simulators.  This makes
+the benchmarks available to a larger community of HLS researchers.
+
+2.4  Ambiguity in Assumptions and Simplifications
+---------------------------------------------------
+
+In describing standard parts, the HDL description may have several
+assumptions built-in (e.g., timing behavior), both due to the lack of
+sufficient information and/or due to the limitations of the synthesis
+tools used.
+
+Similarly, several simplifications (e.g., ignoring tristating) or omissions
+(e.g., omitting several instructions for a complex processor) may be made
+in developing the input HDL description.
+
+The existing benchmark examples for standard parts lack a clear description
+of the assumptions and simplifications made.
+
+2.5  Design Level vs. Description Level
+-----------------------------------------
+
+The benchmarks vary in their level of design (e.g. simple FSMs to complex
+microprocessors), but are all described using behavioral constructs.
+In some instances, the design is already partitioned into functional blocks,
+with behavioral descriptions for each block (e.g., the I8251).
+Furthermore, some designs can easily be described at two levels: abstract
+behavior and partitioned functional blocks, resulting in different
+synthesis issues for each HDL model.
+
+Hence some indication of the level of the design and its partitioning is
+useful when comparing the results of synthesis.
+
+
+2.6  TextBook Examples
+------------------------
+
+Several benchmark examples are of academic interest or are quite trivial
+in their scope and range.  Unfortunately, this results from the difficulty
+in obtaining industrial-strength examples.  Moreover, in instances where
+such designs are somehow acquired, they often have insufficient information
+or documentation to make them useful for use in HLS.
+
+It behooves our industrial participants/researchers/observers to make
+"real" examples available to the HLS research community so that
+we can begin realistic comparative analyses of HLS tools and systems.
+
+This is an appeal for more "real" design examples to augment the current
+set of HLSW benchmarks.
+
+
+
+-----------------------------------------------------------------------------
+
+
+3.  Guidelines for Benchmark Submission (HLSW 92)
+-------------------------------------------------
+
+Based on comments from the previous section, the following guidelines
+are suggested as a first step towards introducing more rigor in the
+benchmarking process, and towards the creation of a robust set of
+benchmark examples for testing HLS tools and systems.
+
+
+3.1  "Well-Known" HDL Description
+---------------------------------
+
+The design must be described using a "well-known" HDL which has a publicly
+available LRM, and which has a publicly available simulator.  Sample
+HDLs that fit this criterion include VHDL, Verilog and Hardware-C.
+
+The HDL description must be liberally commented to allow readability.
+
+
+3.2.  Design Documentation, Assumptions, Simplifications
+--------------------------------------------------------
+
+The source of the design information should be specified (e.g., data sheet,
+initial design spec., etc.).
+
+A description of the design's functionality (using English, flowcharts,
+block diagrams, etc.) must accompany the HDL description.
+
+All assumptions and simplifications made in writing the HDL model must be
+clearly stated.
+
+
+3.3  Simulation Vectors
+-----------------------
+
+A set of input and expected output functional test vectors must accompany the
+HDL description for simulating typical operational behaviors of the design.
+These test vectors are not designed to exhaustively test the design.
+Instead, they give some level of confidence in the behavioral HDL model,
+and allow translation and validation of the model into another HDL or
+description style.
+
+The test vectors must also be accompanied by a (English) description of
+what functionality is being tested. 
+
+The input and expected output vectors should be described in a generic format
+that allows ease of use in different simulation environments.  A brief
+description of the test vector format must accompany the test vector set.
+
+
+3.4  Simulator Details
+----------------------
+
+Each benchmark design must indicate the name, version, and availability
+(where appropriate) of the simulator used to test the design.
+
+
+3.5 Synthesis Outputs 
+---------------------
+
+The outputs of synthesis tools must be simulated using the same simulator
+and test vectors used to check the behavior of the input description.
+
+
+-----------------------------------------------------------------------------
+
+
+4.  New Benchmarks for HLSW 1992  (status as of Sep. 18 1992)
+-------------------------------------------------------------
+
+The directory "HLSynth92" in the MCNC benchmark repository has the
+following design examples that conform to the new guidelines:
+
+	o Processors and Sequencers
+
+		Am2901 	Microprocessor slice
+		Am2910	Microprogram address sequencer
+
+	o Peripheral/Glue Chips
+
+		I8251	USART 
+
+	o DSP Chips
+
+		Kalman filter
+		fifth-order elliptic filter
+
+	o FSM Controllers and Small Examples
+
+		gcd
+		TLC 
+		diffeq
+		controlled counter
+
+
+
+-----------------------------------------------------------------------------
+
+
+5. Brief History
+----------------
+
+This sections gives a brief history of the benchmarking effort for HLS.
+Please inform "dutt@ics.uci.edu" is there are any errors, omissions, or
+corrections.
+
+5.1  1987-1988 
+-------------- 
+
+The benchmarking effort began during the summer of 1987 when an informal
+benchmarking discussion was organized by Gaetano Borriello and Ewald Detjens
+during DAC 1987.  The urgent need for a set of benchmarks led to the HLSW 1988
+Call for Participation stating: "The objective of the workshop is to begin the
+development of a set of ``high-level synthesis benchmarks'' that can provide
+a means of comparing different synthesis systems and guide future work to
+include a complete range of digital circuits".  A mailing list of parties
+interested in the benchmarking effort was also established.
+
+Four classes of circuits and representative examples were proposed as a
+starting point for the benchmark set:
+
+	o Simple controller (I8251 UART)
+	o Simple microprocessor (MC6502)
+	o Signal processing application (fifth order elliptic wave filter)
+	o Complex microprocessor (MC68000)
+
+Except for the wave filter example (which was a textual description), all the
+other examples were written in ISPS.
+
+5.2  1988-1989
+--------------
+
+Robert Mayo took over as the benchmark coordinator after 1988.
+In an effort to expand the benchmark set, design examples continued to be
+solicited from the HLS community.  Since the benchmark set had few design
+examples, design descriptions were added to the benchmark set on an "as-is"
+basis, with the intention of broadening the range and number of design examples.
+
+Listed below is the set of benchmarks that were used for HLSW 1989 (these
+files are available from MCNC under the directory labeled "HLSynth89"):
+
+	o Processors:
+	    mc6502 (ISP description)
+    	    mc68000 (ISP description)
+
+	o Peripheral/glue chips:
+	    i8251 (ISP description, Hardware C description)
+	    Amiga BLIT chip (C description)
+
+	o DSP chips:
+	    fft (paper description only)
+	    pitch extraction (paper description only)
+	    kalman filter (ISP description)
+
+	o Small examples:
+	    Traffic light controller (V & VHDL descriptions)
+	    GCD (V & VHDL descriptions)
+	    Counter (V & VHDL descriptions)
+	    Prefetch (V & VHDL descriptions)
+
+
+5.3  1990-1991
+--------------
+
+Robert Mayo moved the benchmark set to the MCNC file distribution center
+during October of 1990.  In 1991, some additional examples were provided by
+Giovanni De Micheli (Stanford).  These examples were written in HardwareC,
+and included sample input and output test patterns for simulation of the
+behavior.  The complete set of benchmarks used for HLSW 1991 are available
+from MCNC under the directory labeled "HLSynth91".  This set augmented the
+"HLSynth89" benchmark set with the following HardwareC design descriptions:
+
+	daio_receiver           DAIO Receiver
+	daio_phase_decoder      DAIO Phase Decoder
+	diffeq                  Differential Equation Solver
+	ecc                     Error Correction System
+	elliptic                Fifth Order Elliptic Filter
+	frisc                   RISC Microprocessor
+	gcd                     Greatest Common Divisor Alg.
+	parker1986              Example from Alice Parker 1986
+	traffic                 Traffic Light Controller
+	tseng                   Example from Tseng
+
+
+----------------------------------------------------------------------------

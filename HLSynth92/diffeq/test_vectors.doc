@@ -1,0 +1,193 @@
+--------------------------------------------------------------------------
+
+  BENCHMARK       : Differential Equation Solver
+
+  Model Source    : P. G. Paulin, J. P. Knight, E. F. Girczyc:
+                    "HAL: A multi-paradigm approach to automatic data path synthesis"
+                    in Proc. 23rd IEEE Design Automation Conf, Las Vegas, NV, pp. 263-270,
+                    July 1986.
+
+  Testpattern Source : Rajesh Gupta, Stanford University , July 10 1990
+
+  Developed on Aug 17 1992 by : Champaka Ramachandran
+                                Univ. of Calif. , Irvine.
+                                champaka@balboa.eng.uci.edu
+
+--------------------------------------------------------------------------
+
+Testing Strategy :
+
+1. We start of by initializing all the inputs to zero.
+
+-- Pattern #0
+Xinport <= 0;
+Yinport <= 0;
+Uinport <= 0;
+DXport <= 0;
+Aport <= 0;
+
+2. We check if the loop executes the desired number of times and provides the
+   right values for Y and U.
+
+-- Pattern #1
+
+Xinport <= 2;
+Yinport <= 2;
+Uinport <= 1;
+DXport <= 1;
+Aport <= 5;
+
+
+
+3. We check if there is a overflow problem if the initial value of Y is large.
+
+-- Pattern #2
+Xinport <= 2;
+Yinport <= 12;
+Uinport <= 2;
+DXport <= 1;
+Aport <= 5;
+
+
+4. Check if Y and U change when X and Y start off with zero values.
+
+-- Pattern # 3
+
+Xinport <= 0;
+Yinport <= 0;
+Uinport <= 1;
+DXport <= 1;
+Aport <= 4;
+
+
+5. How does the circuit behave if DX is increased ?
+
+-- Pattern # 4
+
+Xinport <= 0;
+Yinport <= 0;
+Uinport <= 1;
+DXport <= 2;
+Aport <= 4;
+
+6. Check if increasing the number of loop iterations causes overflow. 
+
+-- Pattern # 5
+
+Xinport <= 0;
+Yinport <= 0;
+Uinport <= 1;
+DXport <= 2;
+Aport <= 8;
+
+
+7. Check circuit behavior of X is large, and if it ever goes into the loop.
+
+-- Pattern # 6
+
+Xinport <= 20;
+Yinport <= 0;
+Uinport <= 1;
+DXport <= -2;
+Aport <= 8;
+
+
+8. What happens when initial value of Y is large ? 
+
+-- Pattern # 7
+
+Xinport <= 1;
+Yinport <= 32;
+Uinport <= 10;
+DXport <= 1;
+Aport <= 4;
+
+
+9. What happens when U starts off with a zero ? 
+
+
+-- Pattern # 8
+
+Xinport <= 1;
+Yinport <= 1;
+Uinport <= 0;
+DXport <= 1;
+Aport <= 4;
+
+
+
+10. What happens when X and U start off with a zero ? 
+
+-- Pattern # 9
+
+Xinport <= 0;
+Yinport <= 1;
+Uinport <= 0;
+DXport <= 1;
+Aport <= 4;
+
+
+11. How does the behavioir change when U starts off being negative? 
+
+-- Pattern # 10
+
+Xinport <= 0;
+Yinport <= 1;
+Uinport <= -2;
+DXport <= 1;
+Aport <= 4;
+
+
+12. Is there a problem if X and Y start off as zero and U starts off 
+    on the negative ? 
+
+-- Pattern # 11
+
+Xinport <= 0;
+Yinport <= 0;
+Uinport <= -2;
+DXport <= 1;
+Aport <= 4;
+
+13. What happens when X , Y and U start off with negative values? 
+
+-- Pattern # 12
+
+Xinport <= -4;
+Yinport <= -1;
+Uinport <= -2;
+DXport <= 1;
+Aport <= 0;
+
+
+Pattern 13 to Pattern 56 contain some sanity checks. We start off by setting 
+
+Xinport <= 1;
+Yinport <= 0;
+Uinport <= -2;
+DXport <= 1;
+Aport <= 0;
+
+For patterns 13-15, we increment X from 1 to 3
+For patterns 16-18, we set Y = 1 and then increment X from 1 to 3.
+For patterns 19-21, we set Y = 2 and then increment X from 1 to 3.
+
+For patterns 22-30 we set Aport = 2 
+For patterns 22-24, we set Y = 0 and then increment X from 1 to 3
+For patterns 25-27, we set Y = 1 and then increment X from 1 to 3.
+For patterns 28-30, we set Y = 2 and then increment X from 1 to 3.
+
+For patterns 31-39  we set Aport = 3
+For patterns 31-33, we set Y = 0 and then increment X from 1 to 3
+For patterns 34-36, we set Y = 1 and then increment X from 1 to 3.
+For patterns 37-39, we set Y = 2 and then increment X from 1 to 3.
+
+For patterns 40-48  we set Aport = 3 and Uinport = -1
+For patterns 40-42, we set Y = 0 and then increment X from 1 to 3
+For patterns 43-45, we set Y = 1 and then increment X from 1 to 3.
+For patterns 46-48, we set Y = 2 and then increment X from 1 to 3.
+
+For patterns 49-57  we set Aport = 6 and Uinport = -1 and DXport = 2
+For patterns 49-51, we set Y = 0 and then increment X from 1 to 3
+For patterns 52-54, we set Y = 1 and then increment X from 1 to 3.
+For patterns 55-57, we set Y = 2 and then increment X from 1 to 3.

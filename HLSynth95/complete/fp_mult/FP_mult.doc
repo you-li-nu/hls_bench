@@ -1,0 +1,202 @@
+-------------------------------------------------------------------------------
+--
+-- Floating Point Multiplier Benchmark: Main File Documentation
+--
+-- Source:  Patterson, David A., and Hennessy, John L.,  "Computer 
+--	         architecture: a quantitative approach".  San Mateo, CA: Morgank
+--		 Kaufman Publishers, 1990,  Appendix A, p. 3-22
+--  
+-- Author: Jesse Pan
+--         Department of Electrical and Computer Engineering
+--         University of California, Irvine, CA 92717
+--
+-- Acknowledgement: Special thanks to Dr. Tomas Lang's advice on this benchmark
+--
+-- Written on Mar 01, 1994
+--
+-------------------------------------------------------------------------------
+
+1) INTRODUCTION:
+
+  The Floating Point Multiplier is a design algorithm that performs an
+operation, given the operator and two IEEE standard source operands, and
+produces an IEEE standard result.
+
+Both the two inputs and the output are represented by a sign bit, a 127-biased
+integer exponent in the range 0..255, and a 23-bit vector mantissa with a 
+"hidden 1"(e.g. implicit representation in Patterson and Hennessy, "Computer 
+Architecture: a Quantitative Approach").  This is the IEEE 754 standard, and 
+its representation is shown below:
+
+          ______________________________
+          | sign | exponent | mantissa |
+          |______|__________|__________|
+            1 bit   8 bits     23 bits 
+   
+------------------------------------------------------------------------------ 
+
+(1.1)  FUNCTIONAL BLOCK(S)
+
+The Multiplier has one main functional block, shown below:
+
+** The Main functional block consists of one process: the Main process.
+
+	## Main process describes the input and output fields, including the
+	   respective signs, exponents, and mantissas. 
+
+                      OPERAND 1   OPERAND 2
+                          |           |
+                    ______v___________v______
+                    |                       |
+      OPERATION --->|     FLOATING POINT    |
+                    |    ADDER/SUBTRACTOR   |                    
+          CLOCK --->|_______________________|
+                           |         |
+                           v         v
+                         RESULT    FLAGS
+
+------------------------------------------------------------------------------ 
+
+(1.2)  PORTS
+
+INPUT AND OUTPUT PORTS:
+
+______________________________________________________________________________
+|   PORTS   | TYPE | BIT   | DESCRIPTION				      |
+|           |      | WIDTH |						      |
+|-----------|------|-------|--------------------------------------------------|
+|    clk    |  in  |   1   | internal timing				      |
+|-----------|------|-------|--------------------------------------------------|
+| op1_sign  |  in  |   1   | bit sign of 1st operand			      |
+|-----------|------|-------|--------------------------------------------------|
+|  op1_exp  |  in  |   8   | integer exponent of 1st operand, in range 0..255 |
+|-----------|------|-------|--------------------------------------------------|
+| op1_mant  |  in  |  23   | 23-bit vector mantissa of 1st operand	      |
+|-----------|------|-------|--------------------------------------------------|
+| op2_sign  |  in  |   1   | bit sign of 2nd operand			      |
+|-----------|------|-------|--------------------------------------------------|
+|  op2_exp  |  in  |   8   | integer exponent of 2nd operand, in range 0..255 |
+|-----------|------|-------|--------------------------------------------------|
+| op2_mant  |  in  |  23   | 23-bit vector mantissa of 2nd operand	      |
+|-----------|------|-------|--------------------------------------------------|
+| res_sign  |  out |   1   | bit sign of result				      |
+|-----------|------|-------|--------------------------------------------------|
+|  res_exp  |  out |   8   | integer exponent of result, in range 0.255       |
+|-----------|------|-------|--------------------------------------------------|
+| res_mant  |  out |  23   | 23-bit vector mantissa of result		      |
+|-----------|------|-------|--------------------------------------------------|
+| operation |  in  |  ---  | signal that indicates operation, with possible   |
+|           |      |       | values: multiply, idle                           |
+|-----------|------|-------|--------------------------------------------------|
+|   flags   |  out |   4   | 4-bit vector that sets status bit flags          |
+|	    |      |       | flag(3)=zero 	flag(2)=pos_inf	              |
+|	    |      |       | flag(1)=neg_inf    flag(0)=Nan
+|___________|______|_______|__________________________________________________|
+
+-------------------------------------------------------------------------------
+
+(1.3)  THE INSTRUCTION SET:
+
+The Floating Point Adder has three instructions as follows:
+
+** multiply, idle:  control performing operation and producing result
+			 values based on input operands
+
+(1.3.0) The multiplier does not handel denormal floating point number.
+	If result of the multiplication are 
+
+(1.3.1) Overflow/Underflow result exponent
+	If the result exponent of the multiplication are overflow(exp>255) or 
+        underflow(exp<0) then the floating point multiplier will give warning
+	and the output of the multiplier will have no effect from the 
+	operation.
+
+-------------------------------------------------------------------------------
+
+(1.3.2)  FUNCTIONS:
+
+ _____________________________________________________________________________
+|  OPERATION  |  EFFECT UPON RESULT 				              |
+|             |								      |
+|=============================================================================|
+|  multiply   | sets result's sign, exponent, and mantissa after "multiply"   |
+|	      | operands                                	              |
+|-------------|---------------------------------------------------------------|
+|    idle     | maintains previous result's sign, exponent, and mantissa      |
+|_____________|_______________________________________________________________|
+
+(1.3.3) Special input operation table
+
+                  _________________________________________
+                 |     special operands operation table    |
+                 |-----------------------------------------|
+                 |  op1\op2|| Zero  | Nan |  +Inf  | -Inf  |
+                 |=========================================|
+                 |   zero  || Zero  | Nan |  Zero  | Zero  |
+                 |-----------------------------------------|
+                 |   Nan   || Nan   | Nan |  Nan   | Nan   |
+                 |-----------------------------------------|
+                 |   +Inf  || Zero  | Nan |  +Inf  | -Inf  |
+                 |-----------------------------------------|
+                 |   -Inf  || Zero  | Nan |  -Inf  | +Inf  |
+                 |_________||_______|_____|________|_______|
+
+===============================================================================
+
+2)  MODEL DEVELOPED FOR THE Floating Point Multiplier
+
+main process -> The Multiplier is modeled as a single VHDL process
+
+===============================================================================
+
+3)  TESTING STRATEGY
+
+The functions above were tested with the set of test vectors in the file:
+"test.vhd" 
+
+The test vectors were chosen to exhaustively test both nominal and boundary
+values of the sign, exponent, and mantissa of both source operands
+
+Note:  The exponents used are biased-127, in other words, the actual exponent
+       is 127 less than its representation
+       Also, the mantissa is represented in "hidden 1" representation
+
+Nominal Operand:  Sign = 0 or 1,  Exponent = 1 to 254
+                  Mantissa = any 23-bit combination of 0's and 1's, with the
+		             exception of all 0's
+		  The rounding conditions are tested, the rounding mode is based
+		  on IEEE 754 floating-point standard default mode(round/even).
+
+Boundary Operands:
+	            Zero:  Sign = 0 or 1,  Exponent = 0,  
+	                   Mantissa = 23-bit vector consisting of all 0's
+        Minimum Positive:  Sign = 0,  Exponent = 0
+	                   Mantissa = 23 bit-vector: 00000..01   
+        Minimum Negative:  Sign = 1,  Exponent = 0
+	                   Mantissa = 23 bit-vector: 00000..01
+	Maximum Positive:  Sign = 0,  Exponent = 254
+			   Mantissa = 23-bit vector consisting of all 1's
+	Maximum Negative:  Sign = 1,  Exponent = 254
+			   Mantissa = 23-bit vector consisting of all 1's
+        Positive Infinity: Sign = 0,  Exponent = 255
+			   Mantissa = 23-bit vector consisting of all 0's
+        Negative Infinity: Sign = 1,  Exponent = 255
+			   Mantissa = 23-bit vector consisting of all 0's
+	Not a Number(NaN): Sign = 0 or 1,  Exponent = 255
+			   Mantissa = 23-bit vector consisting of any
+			       23-bit combination of 0's and 1's, with the
+			       exception of all 0's 
+
+Each of the three functions was thoroughly tested for correctness and
+precision.
+
+===============================================================================
+
+4)  STATUS OF MODELS
+	 ____________________________________________________
+	|         |                  |              |        |
+	| MODEL   | TEST VECTOR USED |   SIMULATOR  | ERRORS |
+	|_________|__________________|______________|________|
+	|  main   |    		     |	   	    |  	     |
+	| process |    test.vhd      | Synopsys 3.0a|  None  |
+	|_________|__________________|______________|________|

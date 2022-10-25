@@ -1,0 +1,33 @@
+
+   AUTHOR: H. Fatih Ugurdag, Staff Fellow (hugurdag@bonnie.cs.gmr.com)
+   ORGANIZATION: GM R&D Center, Warren, MI
+
+   GOAL OF SYNTHESIS: 
+
+   Simulation results of the synthesized circuit SHOULD match with
+   simulation results of the behavior on a clock-cycle-by-clock-cycle
+   basis.
+
+   DESCRIPTION of Behavior:
+
+   This is a "period counter." It counts the length of a complete
+   cycle of signal "IN" in terms of the number of "Clock" cycles it
+   takes. The circuit is asleep as long as "reset" is low. When reset
+   is released, it waits for a positive edge on "COMMAND" (1st while
+   loop). Note that the circuit assumes that the initial value of
+   COMMAND is 0. That is if COMMAND is 1 the first time it is sampled,
+   that is regarded as a positive edge. Then, the circuit waits for a
+   positive edge on IN (2nd while loop), because we want to measure a
+   complete cycle of IN. That is, we have to start with a fresh new
+   cycle of IN. Then, we count the positive half cycle of IN (3rd
+   while loop).Then, we keep counting in the negative half cycle of IN
+   (4th while loop). Then, we update the output "PERIOD." The circuit
+   later starts waiting for a new positive edge on COMMAND. 
+
+   The interesting feature of this behavioral description is the
+   locations of Clock edges. There is no clock edge before we enter
+   while loops (except the 1st). And there is no clock edge before we
+   exit a while loop. 
+
+   Most behavioral synthesis tools won't even accept this
+   description.

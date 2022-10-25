@@ -1,0 +1,464 @@
+!
+! Intel 8251 behavioral description
+! i8251.main - Main Process v0.1
+!
+! John A. Nestor, August 1987
+!
+
+i8251.main {US} := BEGIN
+
+** Input.Output.Ports **
+
+reset<0:0>, 	! in
+data<7:0>, 	! in_out
+wr.l<0:0>, 	! in
+rd.l<0:0>, 	! in
+cs.l<0:0>, 	! in
+cd<0:0>, 	! in
+reset.int<0:0>, ! out
+mode<7:0>,	! out ( nsbits/scs+esd, ep, pen, nbits, brate )
+control<7:0>, 	! out ( eh, ir, rts, er, sbrk, rxE, dtr, txen )
+status<7:0> ,	! in ( dsr, syndet/brkdet, dfe, oe, pe, txe, rxrdy, txrdy )
+xdata<7:0>,	! in_out
+xgo.set<0:0>,	! in_out
+rdata<7:0>,	! in_out
+rrdy <0:0>,	! in
+rrdy.clr<0:0>,	! out
+sync.mode<0:0>,	! out
+err.clr<0:0>	! out
+
+** Variables **
+
+mdata <7:0>,
+smode<0:0>,
+scs<0:0>,
+esd<0:0>
+
+** Behavior **
+
+i8251.main := BEGIN
+
+  ! reset sequence
+! data = TS.DISABLE NEXT
+  reset.int = 1 NEXT 
+  mode = 0 NEXT
+  control = 0 NEXT
+  xgo.set = 0 NEXT
+  rrdy.clr = 0 NEXT
+  sync.mode = 0 NEXT
+  err.clr = 0 NEXT		! TNEXT
+
+  ! read mode char
+  WAIT ( cs.l AND wr.l AND cd ) NEXT
+  mdata = data NEXT
+  smode = mdata <7:6> Eql 0 NEXT
+  sync.mode = smode NEXT
+  mode = mdata NEXT 		! TNEXT
+  reset.int = 0 NEXT	! start xmtr and rcvr
+
+  ! read sync character(s) if needed
+  IF ( sync.mode ) => BEGIN
+!    rdata = TS.ENABLE NEXT
+    scs = mdata<7> NEXT
+    WAIT ( cs.l AND wr.l AND cd ) NEXT
+    mdata = data NEXT
+    xdata = mdata NEXT
+    xgo.set = 1 NEXT 		! TNEXT
+    xgo.set = 0 NEXT
+    rdata = mdata NEXT
+    rrdy.clr = 1 NEXT 		! TNEXT
+    rrdy.clr = 0 NEXT
+    IF ( NOT scs ) => BEGIN
+      WAIT ( cs.l AND wr.l AND cd ) NEXT
+      mdata = data NEXT
+      xdata = mdata NEXT
+      xgo.set = 1 NEXT 		! TNEXT
+      xgo.set = 0 NEXT
+      rdata = mdata NEXT
+      rrdy.clr = 1 NEXT 	! TNEXT
+      rrdy.clr = 0
+    END
+  END NEXT
+   ! rdata = TS.DISABLE NEXT
+  
+  ! main interp loop
+  REPEAT BEGIN
+    DECODE ( cs.l @ wr.l @ rd.l @ cd ) => BEGIN
+      '1010 := BEGIN	! read data
+	! data = TS.ENABLE NEXT
+	data = rdata NEXT 	! TNEXT
+	WAIT ( NOT wr.l ) NEXT
+	! data = TS.DISABLE NEXT
+	rrdy.clr = 1 NEXT 	! TNEXT
+	rrdy.clr = 0
+      END,
+      '1011 := BEGIN	! read status
+	! data = TS.ENABLE NEXT	
+	data = status NEXT 	! TNEXT
+	WAIT ( NOT wr.l ) ! NEXT
+	! data = TS.DISABLE
+      END,
+      '1100 := BEGIN	! write data
+	xdata = data NEXT 		! TNEXT
+	xgo.set = 1 NEXT 		! TNEXT
+	xgo.set = 0
+      END,
+      '1101 := BEGIN	! write control
+	control = data
+      END
+    END NEXT
+    WAIT( cs.l EQL 0 ) 
+  END
+END
+
+END
+
+
+!
+! Intel 8251 behavioral description
+! i8251.xmtr - Transmitter process v0.1
+!
+! John A. Nestor, August 1987
+!
+
+i8251.xmtr := BEGIN
+
+** Input.Output.Ports **
+
+xdata<7:0>,	! in	(Parallel data in)
+reset.int<0:0>, ! in	(internal reset)
+nbits<1:0>,	! in	(Number of bits (Encoded))
+nsbits<1:0>,	! in	(Number of Stop Bits)
+cts.l<0:0>,	! in	(Clear to Send)
+scs<0:0>,	! in	(Single Character Sync)
+pen<0:0>,	! in	(PARITY ENABLE)
+ep<0:0>,	! in	(EVEN PARITY)
+sync.mode<0:0>,	! in	(Sync mode if true)
+sbrk<0:0>,	! in	(Set Break - transmit break signal)
+txen<0:0>,	! in	(Transmit Enable)
+xgo<0:0>,	! in	(Handshake start command)
+xgo.clr<0:0>,	! out	(Handshake acknowledge (clear ff))
+xdhalf<0:0>,	! out	(Delay control - half delay for start bit)
+xdrdy<0:0>,	! in	(Delay ready)
+txd<0:0>,	! out	(Transmit Data)
+txe<0:0>	! out	(Transmit Empty)
+
+
+** Variables **
+
+xcount<2:0>,
+data<7:0>,
+sync1<7:0>,
+sync2<7:0>,
+syncflg<0:0>,
+async.mode<0:0>,
+par<0:0>
+
+
+** Behavior **
+
+macro	PARITY.EVEN := |NOT PARITY|,
+
+macro   PARITY.ODD := |PARITY|,
+
+i8251.xmtr := BEGIN
+  ! initialize
+  syncflg = 0 NEXT
+  txd = 1 NEXT
+  txe = 0 NEXT
+  xgo.clr = 0 NEXT
+  async.mode = 1 NEXT
+
+  ! wait for reset to go away
+  WAIT( NOT reset.int ) NEXT
+
+  ! set sync status and read sync words if needed
+
+  IF ( sync.mode ) => BEGIN
+    async.mode = 0 NEXT		! TNEXT
+    ! get first sync character
+    WAIT ( xgo ) NEXT
+    sync1 = xdata NEXT		! TNEXT
+    xgo.clr = 1 NEXT		! TNEXT
+    xgo.clr = 0 NEXT
+    IF ( NOT scs ) => BEGIN
+      WAIT ( xgo ) NEXT
+      sync2 = xdata  NEXT	! TNEXT
+      xgo.clr = 1 NEXT		! TNEXT	
+      xgo.clr = 0
+    END
+  END NEXT
+
+  ! main loop
+  REPEAT BEGIN
+    ! wait for enable
+    WAIT ( txen AND cts.l ) NEXT
+
+    ! check for sbrk
+    IF ( sbrk AND async.mode ) => BEGIN
+      txd = 0 NEXT 		! TNEXT
+      WAIT( ( NOT sbrk ) OR ( NOT txen ) OR ( NOT cts.l ) ) NEXT
+      txd = 1
+    END NEXT
+
+    ! test xgo; wait if in async mode or send sync char if in sync mode
+
+    DECODE ( async.mode ) => BEGIN
+      0 := BEGIN
+	DECODE ( xgo ) => BEGIN
+	  0 := BEGIN
+	    txe = 1 NEXT
+            DECODE ( syncflg ) => BEGIN
+	      0 := xdata = sync1,
+	      1 := xdata = sync2
+	    END NEXT
+	    syncflg = NOT syncflg
+          END,
+	  1 := BEGIN
+	    xdata = data NEXT
+	    syncflg = 0 NEXT
+	    xgo.clr = 1
+	  END
+	END
+      END,
+      1 := BEGIN
+	IF ( NOT xgo ) => BEGIN
+	  txe = 1 NEXT
+          WAIT( xgo )
+        END NEXT
+        xdata = data NEXT
+        xgo.clr = 1
+      END
+    END NEXT
+    xcount = '1 @ nbits NEXT
+    xgo.clr = 0 NEXT
+    txe = 0 NEXT
+
+    ! send start bit
+    IF ( async.mode ) => BEGIN
+      WAIT( xdrdy ) NEXT
+      txd = 0
+    END NEXT
+
+    ! send data
+    xloop := begin
+      WAIT( xdrdy ) NEXT
+      txd = xdata<0> NEXT
+      IF ( xcount EQL 0 ) => LEAVE xloop NEXT
+      xcount = xcount - 1 NEXT
+      xdata = xdata SR0 1 NEXT
+      RESTART xloop
+    end NEXT
+
+    ! send parity bit if required
+    IF (  pen ) => BEGIN
+      DECODE ( ep ) => BEGIN
+	0 := par = PARITY.ODD(xdata),
+        1 := par = PARITY.EVEN(xdata)
+      END NEXT
+      WAIT( xdrdy ) NEXT
+      txd = par
+    END NEXT
+    
+    ! send stop bits
+    IF( async.mode ) => BEGIN
+      WAIT( xdrdy ) NEXT
+      txd = 1 NEXT
+      IF ( nsbits<1> ) => BEGIN
+        IF ( nsbits<0> ) => xdhalf = 1 NEXT ! set short delay
+        WAIT( xdrdy )
+      END NEXT
+      xdhalf = 0		! TNEXT
+    END
+  END ! REPEAT
+END
+
+END
+
+
+
+!
+! Intel 8251 behavioral description
+! i8251.rcvr - Receiver Process v0.1
+!
+! John A. Nestor, August 1987
+!
+i8251.rcvr {US}  := BEGIN
+
+** Input.Output.Ports **
+
+rdata<7:0>,	! out	(parallel data out)
+rrdy.set<0:0>,	! out	(handshake set)
+rrdy<0:0>,	! in	(handshake test)
+reset.int<0:0>, ! in	(internal reset)
+scs<0:0>,	! in	(single character sync)
+esd<0:0>,	! in	(external sync)
+nbits<1:0>,	! in	(number of bits (encoded))
+pen<0:0>,	! in	(parity enable)
+ep<0:0>,	! in	(even parity)
+rxe<0:0>,	! in	(rcvr enable)
+brate<1:0>,	! in	(baud rate (encoded))
+sync.mode<0:0>,	! in	(sync mode if true)
+eh<0:0>,	! in	(enter hunt mode)
+fe.set<0:0>,	! out	(framing error set)
+oe.set<0:0>,	! out	(overrun error)
+pe.set<0:0>,	! out	(parity error set)
+syndet<0:0>,	! in_out
+rxrdy<0:0>,	! out	(rcvr rdy)
+rxd<0:0>,	! in	(serial data in)
+rdset<0:0>,	! out	(rcvr delay set)
+rdrdy<0:0>	! in	(rcvr delay rdy)
+
+** Variables **
+
+rcount<3:0>,
+data<7:0>,
+par<0:0>,
+sync1<7:0>,
+sync2<7:0>
+
+** Behavior **
+
+
+i8251.rcvr := begin
+  !initialization
+ 
+  rxrdy = 0 NEXT
+  fe.set = 0 NEXT
+  oe.set = 0 NEXT
+  pe.set = 0 NEXT
+  rrdy.set = 0 NEXT
+  syndet = 0 NEXT
+
+  ! wait for reset to go away
+  WAIT( NOT reset.int ) NEXT
+  ! IF ( esd ) => syndet = TS.DISABLE NEXT
+
+  DECODE ( sync.mode ) => BEGIN
+    0 := rcvr.async(),
+    1 := rcvr.sync()
+  END
+END,
+
+
+rcvr.async := begin
+
+  ! main loop
+  rmloop := BEGIN
+    ! wait for start bit
+    WAIT ( rxd Eql 1 ) NEXT
+    WAIT ( rxd Eql 0 ) NEXT
+
+    ! re-sample start bit ( if not x1 )
+    IF ( brate<1> ) => BEGIN
+      WAIT( rdrdy ) NEXT
+      IF ( rxd Neq 0 ) => restart rmloop
+    END NEXT
+ 
+    rcount = '1 @ nbits NEXT
+    data = 0 NEXT
+
+    ! shift data in
+    rloop := BEGIN
+      WAIT ( rdrdy ) NEXT
+      data = data SRI ( rxd ) NEXT
+      IF ( rcount Eql 0 ) => LEAVE rloop NEXT
+      rcount = rcount - 1 NEXT
+      RESTART rloop
+    END NEXT		! rloop
+
+    ! sample parity bit
+    IF ( pen ) => BEGIN
+       DECODE( ep ) => BEGIN
+        0 := par = PARITY( data ),		! odd parity
+        1 := par = NOT PARITY( data )	! even parity
+      END NEXT
+      WAIT ( rdrdy ) NEXT
+      IF ( par NEQ rxd ) => pe.set = 1
+    END NEXT
+    pe.set = 0 NEXT
+
+    ! sample stop bit
+    WAIT ( rdrdy ) NEXT
+    IF ( rxd  NEQ 1 ) => BEGIN
+      fe.set = 1 NEXT
+      IF ( data Eql 0 ) => syndet = 1 ! brkdet
+    END NEXT
+    fe.set = 0 NEXT
+   
+    ! set up data for transfer
+    IF ( rrdy ) => oe.set = 1 NEXT
+    data = rdata NEXT
+    rrdy.set = 1 NEXT 		! TNEXT
+    rrdy.set = 0 NEXT
+    oe.set = 0
+  END ! rmloop
+END,
+
+rcvr.sync := BEGIN
+
+  ! load sync characters
+
+!  rdata = TS.DISABLE NEXT 	! TNEXT
+  rrdy.set = 1  NEXT 		! TNEXT
+  rrdy.set = 0 NEXT 		! TNEXT
+  WAIT ( rrdy EQL 0 ) NEXT
+  sync1 = rdata NEXT 		! TNEXT
+  IF ( NOT scs ) => BEGIN
+    rrdy.set = 1 NEXT		! TNEXT
+    rrdy.set = 0 NEXT		! TNEXT
+    WAIT ( rrdy EQL 0 ) NEXT
+    sync2 = rdata
+  END NEXT
+!  rdata = TS.ENABLE NEXT 	! TNEXT
+  WAIT( eh ) NEXT
+  REPEAT BEGIN
+    IF ( eh ) => hunt.mode() NEXT
+    rcount = '1 @ nbits NEXT
+    rdata = 0 NEXT
+    rsloop := BEGIN
+      WAIT ( rdrdy ) NEXT
+      data = data SRI rxd NEXT
+      IF ( rcount EQL 0 ) => LEAVE rsloop NEXT
+      rcount = rcount - 1 NEXT
+      RESTART rsloop
+    END NEXT	! rsloop
+    ! set up data for transfer
+    IF ( rrdy ) => oe.set = 1 NEXT
+    data = rdata NEXT
+    rrdy.set = 1 NEXT		! TNEXT
+    rrdy.set = 0 NEXT
+    oe.set = 0
+  END
+END,
+
+hunt.mode := BEGIN
+  IF ( esd ) => BEGIN
+    WAIT ( syndet ) NEXT
+    LEAVE hunt.mode
+  END NEXT
+  data = '11111111 NEXT
+  h1loop := BEGIN
+    ! sample
+    WAIT ( rdrdy ) NEXT
+    data = data SRI rxd NEXT
+    IF ( data NEQ sync1 ) => RESTART h1loop
+  END NEXT ! h1loop
+  IF ( scs Eql 0 ) => BEGIN
+    rcount = '1 @ nbits NEXT
+    rdata = 0 NEXT
+    h2loop := BEGIN
+      WAIT ( rdrdy ) NEXT
+      data = data SRI rxd NEXT
+      IF ( rcount EQL 0 ) => LEAVE h2loop NEXT
+      rcount = rcount - 1 NEXT
+      RESTART h2loop
+    END NEXT ! h2loop
+    IF ( data NEQ sync2 ) => RESTART hunt.mode
+  END
+END
+
+END
+
+
+

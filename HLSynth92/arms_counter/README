@@ -1,0 +1,67 @@
+--------------------------------------------------------------------------
+
+  BENCHMARK : Armstrong Counter (Controlled counter)
+ 
+  Developed on Aug 24 1992 by : Champaka Ramachandran
+                                Univ. of Calif. , Irvine.
+                                champaka@balboa.eng.uci.edu
+
+--------------------------------------------------------------------------
+
+THIS DIRECTORY HAS THE FOLLOWING FILES :
+
+( NOTE: These files, especially the test vectors, pertain to all three 
+        sub-directories mentioned below. )
+
+ROADMAP 	    :  This file explains the organization of files and 
+		       directories in this benchmark example. It also
+		       explains the steps to be followed when executing 
+		       test vectors on the VHDL models. IT IS RECOMMENDED
+		       THAT THIS FILE BE READ BEFORE PROCEEDING FURTHER.
+
+arms_counter.doc    :  This file contains a brief description of the Armstrong
+                       counter.
+
+test_vectors_ARMS_COUNTER.vhdl: This file contains the VHDL (translated) test vectors
+		       for ARMS_COUNTER. In order to simulate it on the Zycad 
+                       ( Version 1.0a) simulator, the model is
+		       instantiated in this file as a component. The test
+		       vectors are statements inside a VHDL process.
+
+test_vectors.doc    :  This is a documentation files on the test vectors,
+
+cmd.inc             :  This is a command file used by the ZYCAD simulator 
+                       ( Version 1.0a) while running the test vectors on any of
+                       the models.
+             
+--------------------------------------------------------------------------
+
+******************************************************************************
+
+ RUNNING THE TEST VECTORS ON THE MODELS USING THE ZYCAD SIMULATOR:
+
+******************************************************************************
+
+ **** Running test_vectors on the whole chip ****
+
+ For example, let us try to run the test vectors on the model contained in
+ file "ARMS_COUNTER.vhdl". This is a model of the whole chip.
+
+ (i) Compile the Pre-defined Functions file by typing 
+          " zvan pack_2.0.vhd"
+ (ii) Compile the VHDL model file by typing 
+          " zvan ARMS_COUNTER.vhdl"
+ (iii) Compile the VHDL test-vectors file by typing 
+          " zvan test_vectors_ARMS_COUNTER.vhdl"
+ (iv)  Run the simulation typing 
+           " zvsim -t ns -i cmd.inc E".
+         
+ The simulation output will appear in a file called "run.out".
+ If there are any errors in simulation, "Assert" statements 
+ will appear in this file, mentioning the port at which the 
+ error occurred and the expected value.
+
+
+
+
+

@@ -1,0 +1,22 @@
+	README file for designs with incomplete information
+	---------------------------------------------------
+
+Author: Preeti R. Panda
+Last Modified: 27 Jan 95
+
+
+The following design examples are available in this directory :
+
+beamformer	- Beamformer (VHDL)
+
+period_counter	- Period Counter (Verilog)
+
+dhrc		- Differential Heat Release Computation (VHDL)
+
+fft		- Fast Fourier Transform (VHDL)
+
+filter		- Switchable 3rd order FIR filter (Verilog)
+
+jacobian	- Jacobian (C)
+
+memory		- Image Processing applications - 7 models (C)

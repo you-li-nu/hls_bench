@@ -1,0 +1,29 @@
+
+		1995 High Level Synthesis Design Repository
+		-------------------------------------------
+
+		Coordinator:	Nikil Dutt, U.C. Irvine
+					(dutt@ics.uci.edu)
+		Authors:	Preeti Ranjan Panda, U.C. Irvine
+					(ppanda@ics.uci.edu)
+				Nikil Dutt, U.C. Irvine
+					(dutt@ics.uci.edu)
+		Last Updated:	25 January 95
+		First Created:	18 January 95
+
+---------------------------------------------------------------------------
+
+This directory has the following contents :
+
+HLSynth95-tr.ps	- Postscript file - Technical Report on the 1995 High Level 
+			Synthesis Design Repository.
+
+README		- This file.
+
+complete	- This directory contains design examples for 
+			which proper documentation and test cases exist.
+
+incomplete	- This directory contains design examples for which
+			test cases and proper documentation do not exist.
+---------------------------------------------------------------------------
+

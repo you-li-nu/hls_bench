@@ -1,0 +1,22 @@
+README file for beamformer design example. 
+
+Author: Preeti Ranjan Panda (ppanda@ics.uci.edu)
+
+
+Description
+-----------
+This directory contains the Beamformer design example. This VHDL model
+is at the behavioral level. It has been used as a test case in
+component selection algorithms. The model, however, has never been simulated.
+
+The contents of this directory are:
+
+beam_pkg.vhd	- VHDL package used by beam_beh.vhd
+
+beam_beh.vhd    - VHDL model for beamformer
+
+README		- This file
+
+
+No test suites or other documentation were made available. References
+are provided in the report.

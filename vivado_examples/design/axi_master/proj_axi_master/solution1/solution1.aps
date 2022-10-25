@@ -1,0 +1,22 @@
+<AutoPilot:solution xmlns:AutoPilot="com.autoesl.autopilot.solution">
+    <name>
+        <value string="solution1"/>
+    </name>
+    <project>
+        <value string="proj_axi_master"/>
+    </project>
+    <targetInfo>
+        <TargetInfo value="xc7z020:clg484:-2"/>
+    </targetInfo>
+    <libraryList>
+        <library name="DefaultPlatform" value="xilinx/zynq/zynq"/>
+        <library name="DefaultPlatform" value="xilinx/zynq/zynq_fpv6"/>
+    </libraryList>
+    <clockList>
+        <clock name="-" period="75MHz" default="false"/>
+    </clockList>
+    <config>
+        <schedule model="example"/>
+    </config>
+</AutoPilot:solution>
+

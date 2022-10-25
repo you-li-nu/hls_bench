@@ -1,0 +1,170 @@
+
+
+!
+!
+!	Kalman Real-Time Controller
+
+!
+!	Description written by Don Thomas based on a Pascal program
+!	provided by Tom Fuhrman of General Motors.
+!	Modified by Ed Uhn and Robert Walker
+!
+!
+!	Note that this description is written in an extended version of
+!	ISPS.  Major changes are the use of ";" as a statement separator,
+!	and the addition of "nbsend" and "nbrecv" non-blocking 
+!	message-passing operations.  
+
+!	"Next" is now used to specify required sequencing (even though
+!	dataflow constraints may not suggest/require it); all other ";" 
+!	separated statements can be reordered by the synthesis tools as
+!	dataflow constraints allow.  The nbsend operation sends the specified
+!	values to another process (without blocking or waiting for a 
+!	previously sent value to be consumed), and the nbrecv
+!	operation receives values into the specified carrier (without
+!	blocking or waiting for a value to be specifically sent).
+!	The specified "messg" is used to link the appropriate
+!	nbsend and nbrecv operations.
+!
+!
+!	The kalman filter is a core computational building block in many
+!	modern control theory applications.  In modern control theory
+!	approaches, the control signals which drive the system to its
+!	desired operating point are calculated from the current system 
+!	state, i.e., the positions and velocities of the physical components
+!	of the system, together with the control set point.  The problem is
+!	that the system state cannot usually be measured directly.  The
+!	purpose of the kalman filter is to predict the system state from a
+!	set of measurements of smaller dimensionality than the state vector.
+!
+!	The operation of the kalman filter chip is as follows:  First a set
+!	of coefficent matrices is downloaded into the chip.  Once this is
+!	completed, the chip enters its control loop.  Within this loop, four
+!	steps are repeated indefinitely.  First, 13 measurements "y" are read
+!	into the chip.  Second, the state vector "x" (of dimension 16) is
+!	estimated.  This involves multiplication by a 16x16 matrix,
+!	multiplication by a 16x13 matrix, and numerical integration using the
+!	previous state estimate.  Third, the control output vector "v" (of
+!	dimension 4) is computed from the state estimate.  This involves
+!	multiplication by a 4x16 matrix.  Fourth, the control vector "v" is
+!	output from the chip.
+
+
+kalman := begin
+
+	** carriers **
+
+	i<3:0>,
+	j<3:0>,
+	vi<15:0>,
+	tempi<15:0>,
+	Anew[0:255]<15:0>,
+	k[0:255]<15:0>,
+	g[0:127]<15:0>,
+	x[0:15]<15:0>,
+	y[0:12]<15:0>,
+	v[0:3]<15:0>,
+	addr<7:0>,
+	temp<1:0>,
+	temp2<1:0>
+
+	** execution.loop **
+
+	kfilt {main} := begin
+		download();
+		j = "F ;
+		s1 := repeat begin
+			x[j] = 0;
+			if (j = j - 1)<4> => leave s1
+		end;
+		repeat begin
+			execute()
+		end
+	end,
+
+	execute := begin
+		j = "C;
+		s2 := repeat begin
+			y[j]=input();
+			if (j = j - 1)<4> => leave s2
+		end;
+		i = "F;
+		s3 := repeat begin
+			j = "F;
+			tempi = 0;
+			s31 := repeat begin
+				tempi = tempi + (Anew[i@j] * x[j])<30:15>;
+				if j LEQ "C =>
+					tempi = tempi + (k[i@j]*y[j])<30:15>;
+				if (j = j - 1)<4> => leave s31
+			end;
+			x[i] = x[i] + ("FFFF * tempi)<30:15>;
+			if (i = i - 1)<4> => leave s3
+		end;
+		i = "7;
+		s4 := repeat begin
+			vi = 0;
+			j = "F;
+			s41 := repeat begin
+				vi = vi + (g[i@j] * x[j])<30:15>;
+				if (j = j - 1)<4> => leave s41
+			end;
+			v[i] = (vi * y[i+4])<30:15>;
+			i = i - 1;
+			if i LEQ "3 => leave s4
+		end;
+		j = 3;
+		s5 := repeat begin
+			output(v[j]);
+			if (j = j - 1)<4> => leave s5
+		end
+	end,
+
+	download := begin
+		addr = "FF;
+		s6 := repeat begin
+			Anew[addr]=input();
+			if (addr = addr - 1)<8> => leave s6
+		end;
+		s7 := repeat begin
+			k[addr]=input();
+			if (addr = addr - 1)<8> => leave s7
+		end;
+		addr = "7F;
+		s8 := repeat begin
+			g[addr]=input();
+			if (addr = addr - 1)<8> => leave s8
+		end
+	end,
+
+	input()<15:0> := begin
+		s9 := repeat begin
+			nbrecv( : temp) {messg: InputDataReady};
+			if (temp EQL 1) => leave s9
+		end;
+		nbrecv( : input) {messg: InputPort};
+		nbsend(1) {messg: InputDataAck};
+		s10 := begin
+			nbrecv( : temp) {messg: InputDataReady};
+			if (temp EQL 0) => leave s10
+		end;
+		nbsend(0) {messg: InputDataAck}
+	end,
+
+	output(val<15:0>) := begin
+		s11 := repeat begin
+			nbrecv( : temp2) {messg: OutputDataAck};
+			if (temp2 EQL 0)=> leave s11
+		end;
+		nbsend(val) {messg: OutputPort};
+		nbsend(1) {messg: OutputDataReady};
+		s12 := repeat begin
+			nbrecv( : temp2) {messg: OutputDataAck};
+			if (temp2 EQL 1)=> leave s12
+		end;
+		nbsend(0) {messg: OutputDataReady}
+	end
+
+end
+
+

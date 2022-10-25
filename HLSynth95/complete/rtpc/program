@@ -1,0 +1,91 @@
+--------------------------------------------------------------------------------
+--
+-- RTPC CPU Benchmark :
+--	Test program - Binary Search
+--
+-- Authors:
+--	Alfred B. Thordarson (abth@ece.uci.edu)
+--	and
+--	Nikil Dutt, professor of CS and ECE
+--	University Of California, Irvine, CA 92717
+--
+-- Changes:
+--	Dec 1, 1993: File created by Alfred B. Thordarson
+--
+--------------------------------------------------------------------------------
+
+WRI
+@ 40
+
+D8 A0 00 01	-- x40 cau r10,r0,1 -- R10 = 0x10000
+C8 AA 00 00	-- x44 cal r10,r10,0
+
+CD BA 00 00	-- x48 l r11,0(r10) -- R11 = Address of last byte of string to search in
+E1 BA      	-- x4C a r11,r10
+90 B7      	-- x4E ais r11,7
+
+CD CA 00 04	-- x50 l r12,4(r10) -- R12 = Byte to search for
+
+91 A8      	-- x54 inc r10,8 -- R10 incremented => R10 = start of string = 0x10004
+
+8A 00 10 00	-- x56 bala 0x1000 -- Branch to Binary Search
+
+F0 89      	-- x5A wait 0x89 -- Print out address of byte or zero if not found
+F0 FF      	-- x5C wait 0xff -- Program done
+
+--------------------------------------------------------------------------------
+-- Binary Search - Algorithm
+-- =============
+-- Arguments: R10 = Address of first byte in string to search
+--            R11 = Address of last byte in string to search
+--            R12 = Byte to search for
+-- Uses:      R13 = Middle byte
+--            R14 = Byte being checked
+--            R9  = 0/Address of place where found
+--------------------------------------------------------------------------------
+@ 1000
+6D AB      	-- x1000 cas r13,r10,r11 -- Calculate middle address
+A8 D1      	-- x1002 sri r13,1
+
+40 ED      	-- x1004 lcs r14,0(r13) -- Load byte
+
+B4 EC      	-- x1006 c r14,r12
+8E A0 00 14	-- x1008 bb 10,+20 -- If EqualTo jump
+8E B0 00 0A	-- x100C bb 11,+10 -- If GreaterThan jump
+
+-- LessThan
+B4 AB      	-- x1010 c r10,r11 -- If NotFound then jump there
+88 90 00 12	-- x1012 bnb 9,+18
+
+C1 AD 00 00	-- x1016 ai r10,r13,0
+90 A1      	-- x101A ais r10,1
+88 8F FF F2	-- x101C bnb 8,-14 -- Recursive jump
+
+-- GreaterThan
+B4 AB      	-- x1020 c r10,r11 -- If NotFound then jump there
+88 90 00 07	-- x1022 bnb 9,+7
+
+C1 BD 00 00	-- x1026 ai r11,r13,0
+92 B1      	-- x102A sis r11,1
+88 8F FF EA	-- x102C bnb 8,-22 -- Recursive jump
+
+-- EqualTo
+C1 9D 00 00	-- x1030 ai r9,r13,0
+EC FF      	-- x1034 balr r15,r15 -- Return
+
+-- NotFound
+C8 90 00 00	-- x1036 cal r9,r0,0
+EC FF      	-- x103A balr r15,r15 -- Return
+
+@ 10000
+00 00 00 14 -- x10000
+00 00 00 A9 -- x10004
+0C 1A 27 2D -- x10008
+33 3F 4E 55 -- x1000C
+5C 62 6F 7E -- x10010
+84 95 9E A9 -- x10014
+AA AC B7 F6 -- x10018
+RUN
+MEM 10000 1001E
+
+QUI

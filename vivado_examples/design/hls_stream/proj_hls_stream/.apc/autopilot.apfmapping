@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<autopilotfilemapping:AutoPilotFileMapping xmlns:autopilotfilemapping="www.autoesl.com/autopilotfilemapping">
+  <source>
+    <originFiles name="bytestrm_dwordproc.cpp" path="/developer/home2/scs/autoesl_workspace/CRs/CR668181/backup/bytestrm_dwordproc.cpp"/>
+  </source>
+  <testbench>
+    <originFiles name="bytestrm_dwordproc_test.cpp" path="/developer/home2/scs/autoesl_workspace/CRs/CR668181/backup/bytestrm_dwordproc_test.cpp"/>
+  </testbench>
+</autopilotfilemapping:AutoPilotFileMapping>

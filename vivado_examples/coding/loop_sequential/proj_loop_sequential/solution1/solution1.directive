@@ -1,0 +1,17 @@
+<AutoPilot:ProjectResources xmlns:AutoPilot="com.autoesl.autopilot.ui.directiveView">
+    <sourceFile name="">
+        <directive functionName="loop_sequential" label="SUM_X" functionLabel="">
+            <pragma name="LOOP_TRIPCOUNT">
+                <option name="tripcount" value="" positionalBoolean="3"/>
+                <option name="max" value="32"/>
+            </pragma>
+        </directive>
+        <directive functionName="loop_sequential" label="SUM_Y" functionLabel="">
+            <pragma name="LOOP_TRIPCOUNT">
+                <option name="tripcount" value="" positionalBoolean="3"/>
+                <option name="max" value="32"/>
+            </pragma>
+        </directive>
+    </sourceFile>
+</AutoPilot:ProjectResources>
+

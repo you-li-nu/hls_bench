@@ -1,0 +1,59 @@
+--------------------------------------------------------------------------------
+--
+--   Intel 8251 Benchmark
+--
+-- Source:  Intel Data Book
+--
+-- VHDL Benchmark author Indraneel Ghosh
+--                       University Of California, Irvine, CA 92717
+--
+-- Developed on April 7, 92
+--
+--------------------------------------------------------------------------------
+
+ THIS DIRECTORY HAS THE FOLLOWING FILES :
+
+ main.vhd     : Model of the "main" process in the VHDL model of 8251 USART
+
+ test_vectors_main.vhd  : VHDL test vectors for the "main" process
+
+ test_vectors_main.doc  : Documentation for the test vectors. Contains description of
+		testing strategy.
+
+ cmd_main.inc : Simulation command file for "main" process test vectors.
+
+ -------------------------------------------------------------------------
+ 
+ PROCEDURE FOR SIMULATING THE TEST VECTORS FILE :
+
+
+ (1) Compile the MVL7 data types file :
+				          zvan types.vhd
+
+ (2) Compile the VHDL data types file :
+				          zvan synthesis_types.vhd
+
+ (3) Compile the VHDL data functions file :
+				             zvan MVL7_functions.vhd
+
+ (4) Compile the VHDL model file of the 8251 USART:
+				       		    zvan main.vhd
+
+ (5) Compile the test vector file :
+		     		    zvan test_vectors_main.vhd
+
+ (6) Simulate the test vectors :
+				 zvsim -t ns -i cmd_main.inc E
+
+     The simulation output appears in a file called "run.out".
+     Any simulation errors (outputs not matching expected values) are shown
+     by "Assert" statements in the file "run.out".
+
+
+
+
+
+
+
+
+

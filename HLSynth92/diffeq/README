@@ -1,0 +1,67 @@
+--------------------------------------------------------------------------
+
+  BENCHMARK       : Differential Equation Solver
+
+  Model Source    : P. G. Paulin, J. P. Knight, E. F. Girczyc:
+                    "HAL: A multi-paradigm approach to automatic data path synthesis"
+                    in Proc. 23rd IEEE Design Automation Conf, Las Vegas, NV, pp. 263-270,
+                    July 1986.
+
+  Testpattern Source : Rajesh Gupta, Stanford University , July 10 1990
+
+  Developed on Aug 17 1992 by : Champaka Ramachandran
+                                Univ. of Calif. , Irvine. 
+                                champaka@balboa.eng.uci.edu
+
+--------------------------------------------------------------------------
+
+THIS DIRECTORY HAS THE FOLLOWING FILES :
+
+ROADMAP 	    :  This file explains the organization of files and 
+		       directories in this benchmark example. It also
+		       explains the steps to be followed when executing 
+		       test vectors on the VHDL models. IT IS RECOMMENDED
+		       THAT THIS FILE BE READ BEFORE PROCEEDING FURTHER.
+
+diffeq.doc           :  This file contains a brief description of the differential
+                        equation solver
+
+test_vectors_DIFFEQ.vhdl: This file contains the VHDL (translated) test vectors
+ 		       for DIFFEQ. In order to simulate it on the Zycad 
+                       ( Version 1.0a) simulator, the model is
+		       instantiated in this file as a component. The test
+		       vectors are statements inside a VHDL process.
+
+test_vectors.doc    :  This is a documentation file on the test vectors,
+
+cmd.inc             :  This is a command file used by the ZYCAD simulator 
+                       ( Version 1.0a) while running the test vectors on any of
+                       the models.
+             
+
+******************************************************************************
+
+ RUNNING THE TEST VECTORS ON THE MODELS USING THE ZYCAD SIMULATOR:
+
+******************************************************************************
+
+ **** Running test_vectors on the whole chip ****
+
+ For example, let us try to run the test vectors on the model contained in
+ file "diffeq.vhdl". This is a model of the whole chip.
+
+ (i) Compile the VHDL model file by typing 
+          " zvan diffeq.vhdl"
+ (ii) Compile the VHDL test-vectors file by typing 
+          " zvan test_vectors_DIFFEQ.vhdl"
+ (iii)  Run the simulation typing 
+           " zvsim -t ns -i cmd.inc E".
+         
+ The simulation output will appear in a file called "run.out".
+ If there are any errors in simulation, "Assert" statements 
+ will appear in this file, mentioning the port at which the 
+ error occurred and the expected value.
+
+
+
+

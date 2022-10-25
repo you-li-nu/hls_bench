@@ -1,0 +1,19 @@
+README file for Jacobian design example. 
+
+Author: Preeti Ranjan Panda (ppanda@ics.uci.edu)
+
+
+Description
+-----------
+This directory contains the Jacobian design example. The model is
+in the C language.
+
+The contents of this directory are:
+
+jacobian.c	- C model of the Jacobian
+
+README		- This file
+
+
+No test suites or other documentation were made available. References
+are provided in the report.

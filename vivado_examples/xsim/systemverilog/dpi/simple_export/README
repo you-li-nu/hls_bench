@@ -1,0 +1,31 @@
+To run on Linux:
+----------------
+1. Run the setup for Xilinx executables. 
+2. Check if the executables "xsc" and "xelab" are in your PATH.
+3. Invoke run.csh
+
+This example shows a simple DPI-C export usage. The System Verilog code (file.sv)
+calls a function "cFunc" defined in function.c that in turn calls a function "svFunc" which is 
+defined on the SV side in the file file.sv.
+1. First the xvlog/xelab combination is run to generate the header dpi.h that is included
+in the function.c
+2. Then the C code is compiled using xsc to create a dll in directory xsim.dir/xsc/dpi.so. 
+3. This dll is then linked into when using "xelab" to compile the file.sv
+
+The return value is checked by the System Verilog code triggering a "PASSED" output for a valid run.
+
+To run on Windows:
+---------------------
+1. set installation path variable <install_root> in run.bat 
+2. Check if the executables "xsc" and "xelab" are in your PATH.
+3. Invoke run.bat
+
+This example shows a simple DPI-C export usage. The System Verilog code (file.sv)
+calls a function "cFunc" defined in function.c that in turn calls a function "svFunc" which is 
+defined on the SV side in the file file.sv.
+1. First the xvlog/xelab combination is run to generate the header dpi.h that is included
+in the function.c
+2. Then the C code is compiled using xsc to create a dll in directory xsim.dir\xsc\dpi.so. 
+3. This dll is then linked into when using "xelab" to compile the file.sv
+
+The return value is checked by the System Verilog code triggering a "PASSED" output for a valid run.

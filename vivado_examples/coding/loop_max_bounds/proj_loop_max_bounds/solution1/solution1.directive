@@ -1,0 +1,16 @@
+<AutoPilot:ProjectResources xmlns:AutoPilot="com.autoesl.autopilot.ui.directiveView">
+    <sourceFile name="">
+        <directive functionName="loop_max_bounds" label="LOOP_X" functionLabel="">
+            <pragma name="UNROLL"/>
+        </directive>
+        <directive functionName="loop_max_bounds" label="" functionLabel="">
+            <pragma name="ARRAY_PARTITION">
+                <option name="partition" value="" positionalBoolean="3"/>
+                <option name="variable" value="A" positionalBoolean="4"/>
+                <option name="complete" value="" positionalBoolean="type"/>
+                <option name="dim" value="0"/>
+            </pragma>
+        </directive>
+    </sourceFile>
+</AutoPilot:ProjectResources>
+

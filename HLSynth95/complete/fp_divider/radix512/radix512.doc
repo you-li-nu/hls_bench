@@ -1,0 +1,69 @@
+----------------------------------------------------------------------------------
+-- Radix-512 Divider Benchmark
+--
+-- Source:  "Division and Square Root: Digit-Recurrence Algorithms and
+--           Implementations" M.D. Ergegovac, T. Lang
+--
+-- VHDL Benchmark author: Alberto Nannarelli on Jan 28 1994
+--
+-- Documentation
+--
+--------------------------------------------------------------------------------
+
+The division to be performed is a division between double precision
+floating point numbers, namely x and d, represented in IEEE standard
+notation (mantissa 53 bits, sign 1 bit, exponent 10 bits).
+In this algorithm only the mantissa is calculated being sign and exponent 
+of the quotient attainable just by comparing and shifting.
+Thus d must be in the range:
+
+             1/2 =< d < 1
+
+and x:
+
+             1/4 =< x < d
+
+
+the quotient q
+
+     x
+    --- = q
+     d
+
+in the range:
+
+             1/4 =< x < d
+
+The Digit-Recurrence Algorithms uses a radix r = 512 = 2^9
+and 9 bits of the quotient are produced every iteration.
+Because of convergence problems, the divider must be within a determined
+range. To achieve this, We scale both operands by a quantity M so that:
+
+    z = M*d
+
+and
+
+    X = M*x
+
+and the condition to be satisfied is:
+
+    1 - alfa < z < 1 + beta
+
+where both alfa and beta are functions of the radix r.
+
+The recurrence to be executed is:
+
+    w[j+1] = r*w[j] - q(j+1)*z		j = 1, 2 ..... (n.bit)/log2(r)
+
+    q(j) = floor{ r*w[j] + 1/2 }
+
+where
+w[i] is the residual after iteration i, w[0]=X;
+q(i) are the 9 quotient bits generated at iteration i;
+
+The addition are made by a carry save adder (CSA), a circuit that generates
+2 outputs (sum and carry) and speeds up the iterations (no carry propagation)
+in the hardware implementation.
+
+At the end if the final residual is positive, the quotient must be rounded
+by adding 1 to its mantissa.

@@ -1,0 +1,62 @@
+---------------------------------------------------------------------------
+
+  Floating Point Adder/Subtractor: README FILE
+
+  Developed on June 9, 1993 by :
+                                Bob McIlhenny,
+                                Univ. of Calif. , Irvine, CA 92717
+				rmcilhen@vlsi.ics.uci.edu
+  Modified on Dec 13, 1993 by  : 
+				Jesse Pan
+				Univ. of Calif. , Irvine, CA 92717
+				jpan@ece.uci.edu
+
+--------------------------------------------------------------------------
+
+THIS DIRECTORY HAS THE FOLLOWING FILES :
+
+adder.doc           :  This file contains a brief description of the Floating
+                       Point Adder/Subtractor.
+
+adder.vhd           :  This is the main control file of the Floating Point
+                       Adder/Subtractor that models its behavior.
+
+test.doc            :  This file contains a brief description of the testing
+                       strategy used in simulating the Floating Point 
+		       Adder/Subtractor.
+
+test.vhd            :  This file contains the VHDL (translated) test vectors
+                       for the Floating Point Adder/Subtractor model.  
+		       In order to simulate it on the Synopsys ( Version 3.0) 
+		       simulator, the model is instantiated in this file as a 
+		       component. The test vectors are statements inside a 
+		       VHDL process.
+
+
+-------------------------------------------------------------------------
+******************************************************************************
+
+ RUNNING THE TEST VECTORS ON THE MODELS USING THE SYNOPSYS SIMULATOR: 
+
+******************************************************************************
+
+ **** Running test_vectors on the Floating Point Adder/Subtractor ****
+
+  To simulate the Floating Point Adder/Subtractor model:
+
+    (i) Compile the adder.vhd file by typing
+          "vhdlan adder.vhd"
+
+    (ii) Compile the test.vhd file by typing
+            "vhdlan test.vhd"
+
+    (iv) Simulate the process by typing
+           "vhdldbx ATEST__TEST1"
+
+         If there are any errors in simulation, "Assert" statements
+         will appear in this file, mentioning the port at which the
+         error occurred and the expected value.  The one valid "Assert"
+         statement expected in the testing process is "Precision lost",
+         which occurs when the result is inaccurate because one operand
+         has a significantly larger exponent than the other 
+

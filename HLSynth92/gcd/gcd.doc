@@ -1,0 +1,46 @@
+--------------------------------------------------------------------------------
+--
+--   DOCUMENTATION ON THE GREATEST COMMON DIVISIOR
+--
+-- Source : "Algorithmics" by Brassard and Bradley
+--
+-- author: Ted Lee
+--         University Of California, Irvine, CA 92717
+--         tedl@ics.uci.edu
+--
+--   Developed on Feb 19, 1992
+--
+--------------------------------------------------------------------------------
+
+ OVERVIEW
+
+ The gcd model described in this example consists of two 8-bit input ports, 
+ one 8-bit output port, and a one-bit input port that enables the gcd model 
+ when the value is low.
+
+_______________________________________________________________________________
+
+ PORTS
+
+ It has the following ports :-
+_______________________________________________________________________________
+|  PORT    | TYPE | BIT   |                DESCRIPTION                        |
+|	   |      | WIDTH |						      |
+|==========|======|=======|===================================================|
+| xi	   |  in  |  8    | Input x                                           |
+|__________|______|_______|___________________________________________________|
+| yi       |  in  |  8    | Input y                                           |
+|__________|______|_______|___________________________________________________|
+| ou       | out  |  8    | Output ou = gcd(xi, yi)                           |
+|__________|______|_______|___________________________________________________|
+| rst      |  in  |  1    | ou = gcd(xi, yi) only when rst = '0'              |
+|__________|______|_______|___________________________________________________|
+
+_______________________________________________________________________________
+
+ OPERATION 
+
+ The gcd model can be enabled by setting rst='0'. The output ou will be 
+ evaluated as gcd(xi, yi) based on the input values of xi and yi. If rst='1',
+ then the output will be evaluated to be "00000000".
+

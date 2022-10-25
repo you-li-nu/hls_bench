@@ -1,0 +1,217 @@
+--------------------------------------------------------------------------------
+--
+--   Traffic light Controller Benchmark -- Simulation vector documentation
+--
+-- Source: The model and test patterns were obtained from the Hardware C   
+--         model written by R. Gupta (7/23/90) at Stanford.
+--
+-- author: Champaka Ramachandran
+--         University Of California, Irvine, CA 92717
+--         champaka@balboa.eng.uci.edu
+-- 
+-- Written on August 11th 1992
+--
+--------------------------------------------------------------------------------
+
+------------------
+Testing Strategy :
+------------------
+
+There exists 4 Tests that cross check the following sequence of events :
+
+  Strategy 1 
+  ----------
+
+Init --> Cars and TimeoutL --> TimeoutS --> !Cars  --> TimeoutS 
+
+-- Pattern #0
+Cars <= '1';
+TimeoutL <= '1';
+TimeoutS <= '0';
+
+-- Pattern #1
+Cars <= '0';
+TimeoutL <= '0';
+TimeoutS <= '1';
+
+-- Pattern #2
+Cars <= '1';
+TimeoutL <= '0';
+TimeoutS <= '1';
+
+-- Pattern #3
+Cars <= '0';
+TimeoutL <= '0';
+TimeoutS <= '0';
+
+-- Pattern #4
+Cars <= '0';
+TimeoutL <= '0';
+TimeoutS <= '1';
+
+
+          1. Checks whether the initial condition sets the Highway 
+             light to green and the Farm light to red.
+          2. Checks if there is a car on the side road and the long
+             timeout occurs, the highway light changes to yellow.
+          3. After a short time out the highway light changes to
+             red and the farm light changes to green.
+          4. If there are no cars on the side road, the farm light
+             changes to yellow.
+          5. After a short timeout, the farm light changes to red
+             and the highway light changes to green.
+
+
+  Strategy 2
+  ----------
+
+  Cars and TimeoutL --> !Cars --> TimeoutL --> Timeout L and TimeoutS
+
+
+-- Pattern #5
+Cars <= '1';
+TimeoutL <= '1';
+TimeoutS <= '0';
+
+-- Pattern #6
+Cars <= '0';
+TimeoutL <= '0';
+TimeoutS <= '0';
+
+-- Pattern #7
+Cars <= '0';
+TimeoutL <= '1';
+TimeoutS <= '0';
+
+-- Pattern #8
+Cars <= '0';
+TimeoutL <= '1';
+TimeoutS <= '1';
+
+
+          1. Checks if there is a car on the side road and the long
+             timeout occurs, the highway light changes to yellow.
+          2. If there is no short timeout, then the Highway light 
+             changes to red and the farm light changes to yellow.
+          3. No change
+          4. After a short timeout, the highway light changes to green
+             and the farm light changes to red.
+
+
+  Strategy 3
+  ----------
+
+  Cars -> Cars & TimeoutS --> Cars & TimeoutL --> Cars, TimeoutS & Timeout L
+     --> Cars --> Cars & TimeoutL --> Cars and TimeoutS
+
+
+-- Pattern #9
+Cars <= '1';
+TimeoutL <= '0';
+TimeoutS <= '0';
+
+-- Pattern #10
+Cars <= '1';
+TimeoutL <= '0';
+TimeoutS <= '1';
+
+-- Pattern #11
+Cars <= '1';
+TimeoutL <= '1';
+TimeoutS <= '0';
+
+-- Pattern #12
+Cars <= '1';
+TimeoutL <= '1';
+TimeoutS <= '1';
+
+-- Pattern #13
+Cars <= '1';
+TimeoutL <= '0';
+TimeoutS <= '0';
+
+-- Pattern #14
+Cars <= '1';
+TimeoutL <= '1';
+TimeoutS <= '0';
+
+-- Pattern #15
+Cars <= '1';
+TimeoutL <= '0';
+TimeoutS <= '1';
+
+
+          1. No Change.
+          2. No Change.
+          3. Checks if there is a car on the side road and the long
+             timeout occurs, the highway light changes to yellow.
+          4. After a short time out the highway light changes to
+             red and the farm light changes to green.
+          5. No change. 
+          6. If there is a long time out, the farm light changes to yellow. 
+          7. After a short timeout, the highway light changes to green
+             and the farm light changes to red.
+          8. No Change.
+
+  Strategy 4
+  ----------
+
+-- Pattern #16
+Cars <= '1';
+TimeoutL <= '0';
+TimeoutS <= '0';
+
+
+-- Pattern #17
+Cars <= '1';
+TimeoutL <= '0';
+TimeoutS <= '1';
+wait for 10 ns;
+
+-- Pattern #18
+Cars <= '1';
+TimeoutL <= '1';
+TimeoutS <= '0';
+
+-- Pattern #19
+Cars <= '1';
+TimeoutL <= '1';
+TimeoutS <= '1';
+
+
+-- Pattern #20
+Cars <= '1';
+TimeoutL <= '0';
+TimeoutS <= '0';
+
+
+-- Pattern #21
+Cars <= '0';
+TimeoutL <= '0';
+TimeoutS <= '0';
+
+
+-- Pattern #22
+Cars <= '0';
+TimeoutL <= '0';
+TimeoutS <= '0';
+
+
+-- Pattern #23
+Cars <= '0';
+TimeoutL <= '0';
+TimeoutS <= '1';
+
+Cars & TimeoutL --> Cars, TimeoutL & TimeoutS --> Cars --> None --> TimeoutS 
+
+          1. Checks if there is a car on the side road and the long
+             timeout occurs, the highway light changes to yellow.
+          2. After a short time out the highway light changes to
+             red and the farm light changes to green.
+          3. No change. 
+          4. If there are no cars on the side road, the farm light
+             changes to yellow.
+          5. After a short timeout, the highway light changes to green
+             and the farm light changes to red.
+
+

@@ -1,0 +1,79 @@
+--------------------------------------------------------------------------------
+--
+--   Intel 8251 Benchmark
+--
+-- Source:  Intel Data Book
+--
+-- VHDL Benchmark author Indraneel Ghosh
+--                       University Of California, Irvine, CA 92717
+--
+-- Developed on April 7, 92
+--
+--------------------------------------------------------------------------------
+
+
+ THIS DIRECTORY HAS THE FOLLOWING FILES :
+
+ 8251.vhd 	     : This file contains our VHDL model of the 8251
+
+ 8251.doc            : This file contains a description of our VHDL model of
+		       the 8251 (which is in file "8251.vhd") and details
+		       regarding the function of global signals and local
+		       variables used in the model. 
+
+ test_vectors.doc    : This file contains a description of the testing strategy
+
+ MVL7_functions.vhd  :  This file contains some VHDL functions used in the
+		        VHDL models (including a resolution function).
+
+ types.vhd           :  This file contains some MVL7 public domain types and functions
+
+ synthesis_types.vhd : This file contains some VHDL data types used in the
+		       models.
+
+ THIS DIRECTORY HAS THE FOLLOWING SUB-DIRECTORIES :
+
+ vectors             : This directory contains test vectors for simulating the
+		       VHDL model of the 8251 and related documentation.
+                       The test vectors have been split into a number of files
+                       to improve the runtimes for compilation and simulation.
+
+ components 	     : This directory contains instantiated models for the
+		       three main constituent "VHDL processes" ("main", 
+		       "receiver" and "transmitter") in our VHDL model of the
+		       8251 USART (which is in file "8251.vhd").
+		       It also contains test vectors for testing those
+		       "constituent processes".
+
+
+----------------------------------------------------------
+  Procedure to Simulate the model on one test vector set
+----------------------------------------------------------
+
+ (1) Compile the MVL7 data types file :
+				          zvan types.vhd
+
+ (2) Compile the VHDL data types file :
+				          zvan synthesis_types.vhd
+
+ (3) Compile the VHDL data functions file :
+				             zvan MVL7_functions.vhd
+
+
+ (4) Compile the VHDL model file of the 8251 USART:
+				       		    zvan 8251.vhd
+
+ (5) Compile the test vector file :
+		     		    zvan rx_async_8_1x.vhd
+
+ (6) Simulate the test vectors :
+				 zvsim -t ns -i cmd_inc E
+
+     The simulation output appears in a file called "run.out".
+     Any simulation errors (outputs not matching expected values) are shown
+     by "Assert" statements in the file "run.out".
+
+
+
+
+

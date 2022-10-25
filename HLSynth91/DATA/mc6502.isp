@@ -1,0 +1,600 @@
+
+
+! ISPS Description of the MOS Technology MCS 6502 Microprocessor
+ 
+!	G.W.Leive
+!	10 July 1978		ISPS Version
+!	COPYRIGHT (C) 1978
+ 
+MC6502 :=
+    BEGIN
+ 
+**MP.STATE**
+	MACRO romlow:= |"F800 |,
+	MACRO romhi := |"FFFF |,
+	MACRO ramlow:= |"0000 |,
+	MACRO ramhi := |"1000 |,
+	MACRO maxb  := |"FFFF |,	! High end of byte memory
+ 
+    Mb[0:maxb]<7:0>,			! Primary memory range
+	ram[ramlow:ramhi]<7:0> := mb[ramlow:ramhi]<7:0>,	! RAM
+	rom[romlow:romhi]<7:0> := mb[romlow:romhi]<7:0>	! ROM
+ 
+**PC.STATE**
+ 
+    Pc<15:0>,				! Program counter
+ 
+    Y<7:0>,				! Index register
+    X<7:0>,				! Index register
+    S<7:0>,				! Stack pointer
+    Dl<7:0>,				! Input data latch
+    A<7:0>,				! Accumulator
+    Ir<7:0>,				! Instruction register
+    P<7:0>,				! Processor status
+	n<>	:= P<7>,		! Negative result
+	v<>	:= P<6>,		! Overflow
+	b<>	:= P<4>,		! Break command
+	d<>	:= P<3>,		! Decimal mode
+	i<>	:= P<2>,		! Interrupt disable
+	z<>	:= P<1>,		! Zero
+	c<>	:= P<0>,		! Carry
+ 
+    Irq<>,				! Interrupt request
+    Nmi<>,				! Non-maskable interrupt
+    IFSync<>,				! High when instruction fetch
+    Rw<>,				! Read/Write control pin
+    So<>,				! Set overflow pin
+    Reset<>,				! Power up bit
+    Ready<>				! 1 means run, 0 means stop
+ 
+**ADDRESS.CALCULATION**
+ 
+    immed()<15:0> := 		! Immediate
+	BEGIN
+	immed = ab = Pc NEXT
+	Pc = Pc + 1
+	END,
+ 
+    zp()<15:0> := 		! Zero page
+	BEGIN
+	zp = ab = read(Pc) NEXT
+	Pc = Pc + 1
+	END,
+ 
+    abs()<15:0> := 		! Absolute
+	BEGIN
+	abs = ab(Pc + 1, Pc) NEXT
+	Pc = Pc + 2
+	END,
+ 
+    indx()<15:0> := 		! Indexed indirect - (IND, X)
+	BEGIN
+	indx = ab((read(Pc) + X + 1)<7:0>, (read(Pc) + X)<7:0>) NEXT
+	Pc = Pc + 1
+	END,
+ 
+    indy()<15:0> := 		! Indirect indexed - (IND), Y
+	BEGIN
+	indy = ab = ab(read(Pc) + 1, read(Pc)) + Y NEXT
+	Pc = Pc + 1
+	END,
+ 
+    zpx()<15:0> := 		! Zero page indexed by X
+	BEGIN
+	zpx = ab = (read(Pc) + X)<7:0> NEXT
+	Pc = Pc + 1
+	END,
+ 
+    zpy()<15:0> := 		! Zero page indexed by Y
+	BEGIN
+	zpy = ab = (read(Pc) + Y)<7:0> NEXT
+	Pc = Pc + 1
+	END,
+ 
+ 
+    absy()<15:0> := 		! Absolute modified by Y
+	BEGIN
+	absy = ab = ab(Pc + 1, Pc) + Y NEXT
+	Pc = Pc + 2
+	END,
+ 
+    absx()<15:0> := 		! Ablolute modified by X
+	BEGIN
+	absx = ab = ab(Pc + 1, Pc) + X NEXT
+	Pc = Pc + 2
+	END
+ 
+**SERVICE.FACILITIES**
+ 
+    push(dbb.<7:0>) :=			! Push a byte on the stack
+	BEGIN
+	write(1@S, dbb.) NEXT
+	S = S - 1
+	END,
+ 
+    pull<7:0> := 			! Pull a byte off the stack
+	BEGIN
+	S = S + 1 NEXT
+	pull = read(1@S)
+	END,
+ 
+    opex := 	 			! Operation exception
+	BEGIN
+	Ready = 0 NEXT
+	RESTART run
+	END,
+ 
+    setnz(ta.<7:0>) :=			! Set neg and zero condition code
+	BEGIN
+	z = ta. EQL 0; n = ta.<7>
+	END,
+ 
+    branch(cond<>) :=
+	BEGIN
+	DECODE cond =>
+	    BEGIN
+	    0 := Pc = Pc + 1,
+	    1 := Pc = (Pc + 1) + read(PC)	! Relative addressing
+	    END
+	END,
+ 
+    decimal.adjust(tac.<8:0>) :=		! Used by sbc and adc
+	BEGIN
+	IF A<7> EQV read<7> => v = tac.<7> XOR A<7>; c = tac.<8> NEXT
+	IF d =>
+	    BEGIN
+	    tac.<8> = 0 NEXT
+	    IF tac.<3:0> GTR{US} "9 => tac. = tac.<7:0> + "6 NEXT
+	    IF NOT c => c = tac.<8> NEXT
+	    IF tac.<7:4> GTR{US} "9 => tac. = tac.<7:0> + "60 NEXT
+	    IF NOT c => c = tac.<8>
+	    END NEXT
+	A = tac.<7:0> NEXT
+	setnz(A)
+	END,
+ 
+    ab(adh.<15:0>, adl.<15:0>)<15:0> :=		! Address buffer
+	BEGIN
+	ab<15:8> = read(adh.) NEXT
+	ab<7:0>  = read(adl.)
+	END,
+ 
+    ! Read and write memory access routines
+ 
+    read(ab.<15:0>)<7:0> :=		! Read from valid memory
+	BEGIN
+	Rw = 1 NEXT
+	IF NOT Ready => RESTART run NEXT
+	read = "FF NEXT			! Fake a nonexistant memory access
+	IF (ab. GEQ{US} ramlow) AND (ab. LEQ{US} ramhi) => read = ram[ab.];
+	IF (ab. GEQ{US} romlow) AND (ab. LEQ{US} romhi) => read = rom[ab.]
+	END,
+ 
+    write(ab.<15:0>, dbb.<7:0>) :=	! Write to valid memory
+	BEGIN
+	IF (ab. GEQ{US} ramlow) AND (ab. LEQ{US} ramhi) => ram[ab.] = dbb.;
+	Rw = 0
+	END,
+ 
+    ! Interrupt routines
+ 
+    intstk := 				! Interrupt stack operations
+	BEGIN
+	push(Pc<15:8>) NEXT
+	push(Pc<7:0>) NEXT
+	push(P) NEXT
+	i = 1
+	END,
+ 
+    int := 				! Interrupt processing
+	BEGIN
+	IF NOT Reset =>
+	    BEGIN
+	    Reset = Irq = Nmi = Ready = 1 NEXT
+	    Pc = ab("FFFD, "FFFC) NEXT
+	    i = 1 NEXT
+	    LEAVE int
+	    END  NEXT
+	
+	IF NOT Nmi =>
+	    BEGIN
+	    Nmi = 1 NEXT
+	    intstk() NEXT
+	    Pc = ab("FFFB, "FFFA) NEXT
+	    LEAVE int
+	    END  NEXT
+	
+	IF b OR (NOT Irq AND NOT i) =>
+	    BEGIN
+	    intstk() NEXT
+	    b = 0 NEXT
+	    Pc = ab("FFFF, "FFFE)
+	    END
+	END
+ 
+**INSTRUCTION.INTERPRETATION**
+ 
+    run :=
+	BEGIN
+	IF NOT Reset => int() NEXT		! Initial startup
+	IF NOT ready => stop() NEXT
+	IFSync = 1 NEXT				! Instruction fetch
+	Ir = read(Pc) NEXT
+	Pc = Pc + 1 NEXT
+	IFSync = 0 NEXT				! Execute
+	DECODE IR<1:0> =>
+	    BEGIN
+	    '01 := group1(),
+	    '10 := group2(),
+	    '00 := group3(),
+	    '11 := opex()
+	    END NEXT
+	int() NEXT
+	IF So => v = 1 NEXT
+	RESTART RUN
+	END,
+ 
+    ! Group 1 instruction decode
+ 
+    group1 :=
+	BEGIN
+	DECODE Ir<7:5> =>
+	    BEGIN
+	    #0 := ora(),
+	    #1 := and.(),
+	    #2 := eor(),
+	    #3 := adc(),
+	    #4 := sta(),
+	    #5 := lda(),
+	    #6 := cmp(),
+	    #7 := sbc()
+	    END
+	END,
+ 
+    ! Group 2 instruction decode
+ 
+    group2 :=
+	BEGIN
+	DECODE Ir<7:5> =>
+	    BEGIN
+	    #0 := asl(),
+	    #1 := rol(),
+	    #2 := lsr(),
+	    #3 := ror(),
+	    #4 := stx(),	    ! Includes txa, txs
+	    #5 := ldx(),	    ! Includes tax, tsx
+	    #6 := dec(),	    ! Includes dex
+	    #7 := inc()	    	    ! Includes no.op
+	    END
+	END,
+ 
+    ! Group 3 instruction decode
+ 
+    group3 :=
+	BEGIN
+	DECODE Ir =>
+	    BEGIN
+	    "00 := brk(),		! Break
+	    "08 := php(),		! Push status on stack
+	    "28 := plp(),		! Pull status from stack
+	    "48 := pha(),		! Push accumulator
+	    "68 := pla(),		! Pull accumulator
+	    "10 := bpl(),		! Branch on plus
+	    "30 := bmi(),		! Branch on minus
+	    "50 := bvc(),		! Branch if overflow clear
+	    "70 := bvs(),		! Branch if overflow set
+	    "90 := bcc(),		! Branch on carry clear
+	    "D0 := bne(),		! Branch on not equal
+	    "F0 := beq(),		! Branch if equal
+	    "B0 := bcs(),		! Branch if carry set
+	    "18 := clc(),		! Clear carry
+	    "38 := sec(),		! Set carry
+	    "58 := cli(),		! Clear interrupt enable
+	    "78 := sei(),		! Set interrupt enable
+	    "B8 := clv(),		! Clear overflow
+	    "D8 := cld(),		! Clear decimal mode
+	    "F8 := sed(),		! Set decimal mode
+	    "20 := jsr(),		! Jump to subroutine
+	    "24 := bit(read(zp())),	! Bit test - zero page
+	    "2C := bit(read(abs())),	! Bit test - absolute
+	    "40 := rti(),		! Return from interrupt
+	    "4C := jmp(),		! Jump - absolute
+	    "6C := jmp(),		! Jump - indirect
+	    "60 := rts(),		! Return from subroutine
+	    "84 := sty(zp()),		! Store Y - zero page
+	    "8C := sty(abs()),		! Store Y - absolute
+	    "94 := sty(zpx()),		! Store Y - zero page, X
+	    "88 := dey(),		! Decrement Y
+	    "C8 := iny(),		! Increment Y
+	    "E8 := inx(),		! Increment X
+	    "98 := tya(),		! Transfer Y to A
+	    "A8 := tay(),		! Transfer A to Y
+	    "A0 := ldy(immed()),	! Load Y - immediate
+	    "A4 := ldy(zp()),		! Load Y - zero page
+	    "AC := ldy(abs()),		! Load Y - absolute
+	    "B4 := ldy(zpx()),		! Load Y - zero page, X
+	    "BC := ldy(absx()),		! Load Y - absolute, X
+	    "C0 := cpy(immed()),	! Compare immediate to Y
+	    "C4 := cpy(zp()),		! Compare zero page to Y
+	    "CC := cpy(abs()),		! Compare absolute to Y
+	    "E0 := cpx(immed()),	! Compare immediate to X
+	    "E4 := cpx(zp()),		! Compare zero page to X
+	    "EC := cpx(abs()),		! Compare absolute to X
+	    OTHERWISE := opex()
+	    END
+	END
+ 
+**INSTRUCTION.EXECUTION**
+ 
+    ! Group 1 instruction execution
+ 
+    addrs1()<15:0> := 				! Group 1 address generation
+	BEGIN
+	DECODE Ir<4:2> =>
+	    BEGIN
+	    #0 := addrs1 = indx(),
+	    #1 := addrs1 = zp(),
+	    #2 := addrs1 = immed(),
+	    #3 := addrs1 = abs(),
+	    #4 := addrs1 = indy(),
+	    #5 := addrs1 = zpx(),
+	    #6 := addrs1 = absy(),
+	    #7 := addrs1 = absx()
+	    END
+	END,
+ 
+    ora := 						! Or
+	BEGIN
+	A = A OR read(addrs1()) NEXT
+	setnz(A)
+	END,
+ 
+    and. := 						! And
+	BEGIN
+	A = A AND read(addrs1()) NEXT
+	setnz(A)
+	END,
+ 
+    eor := 						! Exclusive or
+	BEGIN
+	A = A XOR read(addrs1()) NEXT
+	setnz(A)
+	END,
+ 
+    adc := (decimal.adjust(A +{US} c + read(addrs1()))),	! Add with carry
+ 
+    sta := (IF Ir NEQ{US} "89 => write(addrs1(),A)),	! Store immediate
+ 
+    lda := 						! Load accumulator
+	BEGIN
+	A = read(addrs1()) NEXT
+	setnz(A)
+	END,
+ 
+    cmp := 						! Compare
+	BEGIN
+	setnz(A - read(addrs1())) NEXT
+	c = A GEQ read
+	END,
+ 
+    sbc := (decimal.adjust(A +{US} c + NOT read(addrs1()))),	! Sub/carry
+ 
+    ! Group 2 addressing mode selection
+ 
+    ! Group 2 gets and puts
+ 
+    get2()<8:0> := 	! Get the correct operand and return it in "get2"
+	BEGIN
+	DECODE Ir<4:2> =>
+	    BEGIN
+	    #1 := get2<7:0> = read(zp()),
+	    #2 := get2<7:0> = A,
+	    #3 := get2<7:0> = read(abs()),
+	    #5 := get2<7:0> = read(zpx()),
+	    #7 := get2<7:0> = read(absx()),
+     OTHERWISE := opex()
+	    END NEXT
+	get2<8> = c
+	END,
+ 
+    put2(ta.<7:0>) := 	! Put the operand in the proper location
+	BEGIN
+	DECODE Ir<4:2> =>
+	    BEGIN
+	    [#1,#3,#5,#7] := write(ab, ta.),
+	    #2		  := A = ta.,
+	    OTHERWISE	  := opex()
+	    END NEXT
+	setnz(ta.)
+	END,
+ 
+    ! Group 2 instruction execution
+ 
+    asl := 					! Arithmetic shift left
+	BEGIN
+	get2 = get2() SL0 1 NEXT
+	c = get2<8>; put2(get2)
+	END,
+ 
+ 
+    rol := 					! rotate left
+	BEGIN
+	get2 = get2() SLR 1 NEXT
+	c = get2<8>; put2(get2)
+	END,
+ 
+    lsr := 					! Logical shift right
+	BEGIN
+	c = get2<2> NEXT
+	get2 = get2<7:0> SR0 1 NEXT
+	put2(get2)
+	END,
+ 
+    ror := 					! Rotate right
+	BEGIN
+	get2 = get2() SRR 1 NEXT
+	c = get2<8>; put2(get2)
+	END,
+ 
+    stx := 					! Store index register
+	BEGIN
+	DECODE Ir<4:2> =>
+	    BEGIN
+	    #1 := write(zp(), X),
+	    #2 := A = X,			! Txa
+	    #3 := write(abs(), X),
+	    #5 := write(zpy(), X),
+	    #6 := S = X,			! Txs
+     OTHERWISE := opex()
+	    END
+	END,
+ 
+    ldx := 					! Load index register
+	BEGIN
+	DECODE Ir<4:2> =>
+	    BEGIN
+	    #0 := X = read(immed()),
+	    #1 := X = read(zp()),
+	    #2 := X = A,			! Tax
+	    #3 := X = read(abs()),
+	    #4 := opex(),
+	    #5 := X = read(zpy()),
+	    #6 := X = S,			! Tsx
+	    #7 := X = read(absy())
+	    END  NEXT
+	setnz(X)
+	END,
+ 
+    dec := 					! Decrement
+	BEGIN
+	DECODE Ir EQL "CA =>
+	    BEGIN
+	    0 := put2(get2() - 1),
+	    1 := BEGIN				! Dex
+		 X = X - 1 NEXT
+		 setnz(X)
+		 END
+	    END
+	END,
+ 
+    inc := 					! Increment
+	BEGIN
+	IF Ir NEQ "EA => put2(get2() + 1)	! Op "EA => no.op
+	END,
+ 
+    ! Group 3 instruction execution
+ 
+    brk := (b = 1; Pc = Pc+1),	! Break
+ 
+    php := (push(P)),		! Push processor status on stack
+    plp := (P = pull()),	! Pull processor status from stack
+    pha := (push(A)),		! Push accumulator on stack
+    pla := 			! Pull accumulator from stack
+	BEGIN
+	A = pull() NEXT
+	setnz(A)
+	END,
+ 
+    bpl := (branch(NOT n)),	! Branch on plus
+    bmi := (branch(n)),		! Branch on minus
+    bvc := (branch(NOT v)),	! Branch on overflow clear
+    bvs := (branch(v)),		! Branch if overflow set
+    bcc := (Branch(NOT c)),	! Branch on carry clear
+    bne := (branch(NOT z)),	! Branch if not equal
+    beq := (branch(z)),		! Branch on equal
+    bcs := (branch(c)),		! Branch on carry set
+ 
+    clc := (c = 0),		! Clear carry flag
+    sec := (c = 1),		! Set carry
+    cli := (i = 0),		! Clear interrupt disable bit
+    sei := (i = 1),		! Set interrupt disable status
+    clv := (v = 0),		! Clear overflow
+    cld := (d = 0),		! Clear decimal mode
+    sed := (d = 1),		! Set decimal mode
+ 
+    jsr := 			! Jump to subroutine
+	BEGIN
+	push((Pc + 1)<15:8>) NEXT
+	push((Pc + 1)<7:0>) NEXT
+	Pc = abs()
+	END,
+ 
+    bit(ta.<7:0>) :=		! Bit test
+	BEGIN
+	n = ta.<7>; v = ta.<6>; z = (ta. AND A) EQL 0
+	END,
+ 
+    rti :=			! Return from interrupt
+	BEGIN
+	P = pull() NEXT
+	Pc<7:0>  = pull() NEXT
+	Pc<15:8> = pull(); b = 0
+	END,
+ 
+    jmp :=			! Jump
+	BEGIN
+	Pc = abs() NEXT
+	IF Ir EQL "6C => Pc = abs()	! Indirect
+	END,
+ 
+    ! Group 3 instruction execution (page 2)
+ 
+    rts := 				! return from subroutine
+	BEGIN
+	Pc<7:0> = pull() NEXT
+	Pc<15:8> = pull() NEXT
+	Pc = Pc + 1
+	END,
+ 
+    sty(ab.<15:0>) := (write(ab., Y)), 	! Store index Y in memory
+ 
+    dey := 				! Decrement index Y by one
+	BEGIN
+	Y = Y - 1 NEXT
+	setnz(Y)
+	END,
+ 
+    tya := 				! Transfer index Y to accumulator
+	BEGIN
+	A = Y NEXT
+	setnz(A)
+	END,
+ 
+    ldy(ab.<15:0>) := (Y = read(ab.)), 	! Load index Y with memory
+ 
+    tay := 			     	! Transfer accumulator to index Y
+	BEGIN
+	Y = A NEXT
+	setnz(Y)
+	END,
+ 
+    cpy(ab.<15:0>) := 		     	! Compare memory and index Y
+	BEGIN
+	setnz(Y - read(ab.)) NEXT
+	c = Y GEQ read
+	END,
+ 
+    iny := 			     	! Increment index Y by one
+	BEGIN
+	Y = Y + 1 NEXT
+	setnz(Y)
+	END,
+ 
+    cpx(ab.<15:0>) := 			! Compare memory and index X
+	BEGIN
+	setnz(X - read(ab.)) NEXT
+	c = X GEQ read
+	END,
+ 
+    inx := 				! Increment index X by one
+	BEGIN
+	X = X + 1 NEXT
+	setnz(X)
+	END
+ 
+ 
+    END		! End of MC6502
+
+
+
+

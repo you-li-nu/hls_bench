@@ -1,0 +1,75 @@
+
+
+			Notes on the i8251 ISPS Description
+				John A. Nestor
+		Department of Electrical and Computer Engineering
+			Illinois Institute of Technology
+				Chicago, IL 60616
+
+The Intel 8251 acts as an interface between an 8080-style microprocessor
+bus, a serial transmitter, and a serial receiver.  Because these three tasks
+can happen concurrently, the ISPS description is broken down into three
+"hardware processes" which represent separate data paths and controllers.
+
+The i8251.main process handles the microprocessor interface and communicates
+information to and from the i8251.xmtr and i8251.rcvr processes.
+Communication between the three processes is synchronized through the use of
+set-reset flip-flops which are set by one process and cleared by another
+process.  The following paragraphs describe some of the details of each
+process.
+
+Each process is described in ISPS in three sections: an Input.Output.Ports
+section that describes the ports of the process as ISPS carriers, a
+Variables section that describes the carriers used as variables in the
+procedural description, and a Behavior section that contains the procedural
+description of behavior.
+
+The i8251.main process implements the microprocessor interface and
+communicates information to and from the transmitter and receiver processes.
+The MODE, CONTROL, and STATUS bytes defined in the i8251 specification are
+implemented as input and output ports that are read and written by the
+transmitter and receiver process.  Following initialization this process
+waits for the mode byte to be written.  If synchronous operation is
+specified by the mode byte then it reads either one or two sync characters
+and transmits them to the transmitter and receiver processes.  It then goes
+into a loop where it waits for chip select and a read or write command
+signal over the microprocessor interface.  A read operation takes data from
+the receiver process (this is signalled to the receiver by clearing the
+"rrdy" flip-flop) or status information from the status input port.  A write
+operation writes data to either the transmitter process (new data is
+signalled to the transmitter by setting the "xrdy" flip-flop) or the control
+byte output port.
+
+The i8251.xmtr process implements synchronous and asynchronous data
+transmission.  This process depends on a separate "xdly" module to
+synchronize transmission with the baud rate.  This module is basically a
+counter that divides at a rate controlled by the mode byte.  In asynchronous
+mode, the transmitter process sends a start bit followed by data followed by
+the specified number of stop bits.  Transmitting one and a half stop bits is
+accomplished by asserting the "xdhalf" signal to the xdly module, which
+halves the baud rate delay signal.
+
+The i8251.rcvr process recieves synchronous or asynchronous data.
+Synchronous and asynchronous modes are described by two separate procedures,
+rcvr.sync and rcvr.async.  The rcvr.async procedure waits for a start bit
+and then shifts in data at a baud rate that is specified by an external
+"rdly" module.  Like the xdly module, this module is basically a counter
+that asserts a the rrdy signal at the baud rate.  It is synchronized to the
+falling edge of the start bit using the "dreset" port, which starts the
+counter in a way that asserts the drdy signal in the middle of each
+following bit. Asynchronous mode uses the "hunt.mode" procedure to locate
+sync characters and then accepts characters at a rate specified by the
+external clock throught the rdly module.  Both modes compute and check
+parity if specified and set the parity error flip-flop if an error is found.
+
+The receiver sends data to the main process using a "rrdy" flip-flop that is
+set each time that a new character is received.  The main process clears
+this flip-flop when the character is read through the microprocessor
+interface.  If a new character is ready before the previous one is read then
+the receiver also sets the "oe" overrun error flip-flop.  Asynchronous mode
+also checks for a framing error (when the stop bit is not zero) and sets the
+"fe" flip-flop if this condition occurs.
+
+---------------------------------------
+
+

@@ -1,0 +1,917 @@
+--------------------------------------------------------------------------------
+--
+-- RTPC CPU Benchmark :
+--	Documentation of the RTPC-Model
+--
+-- Derived from
+--	RTPC description written in verilog by Edward Czeck et al.
+--	Most likely based on the IBM RT-PC Hardware Technical
+--	Reference (c) 1985 (for RT PC model 10, 20, and 25)
+--
+-- Authors:
+--	Alfred B. Thordarson (abth@ece.uci.edu)
+--	and
+--	Nikil Dutt, professor of CS and ECE
+--	University Of California, Irvine, CA 92717
+--
+-- Changes:
+--	Dec 1, 1993: File created by Alfred B. Thordarson
+--
+--------------------------------------------------------------------------------
+
+1. INTRODUCTION
+===============
+
+ This RTPC-model is mainly based on a verilog description, written at
+CMU initially by Edward Czeck but Herman Schmit and Rich Cloutier have
+made some changes which may or may not be included.
+
+ I have included a clock to clock the execution machine and a memory
+latency time. This is the only timing in the model, there is no timing
+on the execution of the instructions. This is just a behavioral-model
+and it should not be used to time a sequence of instructions - but
+merly to validate if the code works.
+
+ The model is written as one process and most of the instructions have
+their own procedure which will be run when the instruction is carried
+out. This is a very simple and easily understood model.
+
+ The model presents all the instruction set with the extension of the
+"wait" instruction for run-time debugging and a nop-instruction (explained
+below).
+
+ This model can not be used in synthesis at all and a model at the RT-
+level should be extracted from this one before using any synthesis-tool.
+
+ This documentation is divided into several sub-sections. These
+sections are:
+	1. Introduction
+	2. RTPC CPU
+	   2.1 System and Ports
+	       2.1.1 Control Unit
+	       2.1.2 Memory Unit
+	       2.1.3 RTPC-Model Unit
+	   2.2 Execution Machine
+	   2.3 Instruction Set
+	       2.3.1 Instruction Formats
+	       2.3.2 Table of Instructions
+	3. Run-Time Debugging / The Wait Instruction
+	4. Assembler / Running a Program
+	5. Testing
+	   5.1 Testing Strategy
+	   5.2 Tested Instructions
+	   5.3 Testing Conclusions
+
+2. RTPC CPU
+===========
+
+ The RTPC-architecture is a 8-bit processor which has an 8 bit data-bus
+and a 24 bit address-bus. Allocation of an array to hold the 24-bit
+address-space takes an enormous time so the address space is kept at
+20-bit - which helps alot. The address-size as well as the timing, mentioned
+in the introduction, are generic parameters so they can easily be changed
+in the system.vhd file.
+
+	2.1 System and Ports
+	~~~~~~~~~~~~~~~~~~~~
+ The system consists of three main-blocks. The Control Unit, the Memory
+Unit and the RTPC-Model Unit. Any of these units can be extracted from this
+configuration and used in another one. The execution of the program is done
+by the RTPC-Model Unit which works in a Master-Slave mode with the Control
+Unit. An explanation of each of the units follows.
+
+	2.1.1 Control Unit
+	~~~~~~~~~~~~~~~~~~
+ The control unit reads the file "program" and writes it to memory. The
+Control then triggers the RTPC-Model to start execution and the RTPC-Model
+informs the Control when the execution is complete.
+
+GENERIC		TYPE		DESCRIPTION
+--------------- --------------- ------------------------------------------
+CLOCK_CYCLE	time		Time for one clock cycle.
+MEM_LATENCY	time		Latency of a memory read or write.
+ADDRESS_SIZE.	Decimal		Size of address-bus. Default 24 bits.
+
+PORT	TYPE	BITS/ACTIVE	DESCRIPTION
+------- ------- --------------- ------------------------------------------
+CLOCK	InOut	1		Clock generation for the instr. execution
+				in the RTPC-Model Unit.
+RESET	Out	1/HIGH		Reset-signal to the RTPC-Model Unit.
+				Initially HIGH, when the program is loaded
+				the RESET is set LOW for the RTPC-Model
+				Unit to start execution. 
+RWb	Out	1		Read(1)/Write(0) from/to memory
+CSb	Out	1/LOW		Chip select for the memory
+ADDRESS	Out	ADDRESS_SIZE	Address to memory
+DATA	InOut	8		Data to/from memory
+WAITING	In	1/HIGH		This signal is asserted by the RTPC-Model
+				to indicate that it has finished the
+				execution of the program.		
+
+	2.1.2 Memory Unit
+	~~~~~~~~~~~~~~~~~
+ The memory unit used with the RTPC-model is a byte oriented memory with a
+RWb and a CSb signal as most commercial memories.
+
+GENERIC		TYPE		DESCRIPTION
+--------------- --------------- ------------------------------------------
+ADDRESS_SIZE.	Decimal		Size of address-bus. Default 32 bits.
+
+PORT	TYPE	BITS/ACTIVE	DESCRIPTION
+------- ------- --------------- ------------------------------------------
+RWb	In	1		Read(1)/Write(0) from/to memory
+CSb	In	1/LOW		Chip select
+ADDRESS	In	ADDRESS_SIZE	Address of memory
+DATA	InOut	8		Data to/from memory
+
+	2.1.3 RTPC-Model Unit
+	~~~~~~~~~~~~~~~~~~~~~
+ This is the execution machine which executes the RTPC-code starting at
+address hex 40. The execution machine and the instruction set will covered
+by the next two sections.
+
+GENERIC		TYPE		DESCRIPTION
+--------------- --------------- ------------------------------------------
+MEM_LATENCY	time		Latency of a memory read or write.
+ADDRESS_SIZE.	Decimal		Size of address-bus. Default 24 bits.
+
+PORT	TYPE	BITS/ACTIVE	DESCRIPTION
+------- ------- --------------- ------------------------------------------
+CLOCK	InOut	1		External clock for the instr. execution
+RESET	Out	1/HIGH		When the RESET-signal goes low the
+				execution starts at address hex 40 with
+				all registers and condition codes reset
+				to 0.
+RWb	In	1		Read(1)/Write(0) from/to memory
+CSb	In	1/LOW		Memory Chip select
+ADDRESS	In	ADDRESS_SIZE	Address of memory
+DATA	InOut	8		Data to/from memory
+WAITING	Out	1/HIGH		This signal is asserted to indicate that
+				the execution has finished (wait-instr.
+				F0 FF - see section 3.2)
+
+	2.2 Execution Machine
+	~~~~~~~~~~~~~~~~~~~~~
+ The execution machine refers to the VHDL loop the simulator executes for
+each of the RTPC-instruction. I will explain this by drawing a diagram which
+will clarify how the VHDL loop works.
+
+             +------------------+
+             | INITIATE         |
+             | addr=0x40        |<----------------------------+
+             | wait for reset=0 |                             |
+             +------------------+                             |
+                     |                                        |
+                     V                                        |
+       +----------------------------------------+             |
+       | READ INSTRUCTION                       |             |
+  +--->| Instruction: 2 bytes at address addr   |             |
+  |    | Immidiate  : 2 bytes at address addr+2 |             |
+  |    +----------------------------------------+             |
+  |                    |                                      |
+  |                    V                                      |
+  |          +---------------------+      +-----------------+ |
+  |          | EXECUTE INSTRUCTION | <--> | INSTR.PROCEDURE | |
+  |          +---------------------+      +-----------------+ |
+  |                    |                                      |
+  |                    V                                      |
+  |                   /\                                      |
+  |                  /  \                                     |
+  |                 /    \  Yes                               |
+  |                /Offset\_________________                  |
+  |                \  =0? /                 |                 |
+  |                 \    /                  V                 |
+  |                  \  /        +------------------+         |
+  |                   \/         | RETURN CONTROL   |         |
+  |                    | No      | waiting=1        |         |
+  |                    |         | wait for reset=1 |         |
+  |                    V         +------------------+         |
+  |                    /\                  |                  |
+  |         Branch    /  \   Branch        +------------------+
+  |         Delayed  /    \  Now
+  |        _________/Branch\______________  
+  |       |         \ Cond /              |
+  |       V          \    /               V
+  |  +-------------+  \  /          +------------------+
+  |  | BranchCond= |   \/           | addr=branch_addr |
+  |  | BranNow     |   | Branch     +------------------+   
+  |  +-------------+   | None             |
+  |             |      |                  |
+  |             V      V                  |
+  |          +------------------+         |
+  |          | INCREMENT PC     |         |
+  |          | addr=addr+offset |         |
+  |          +------------------+         |
+  |                    |                  |
+  |<-------------------+------------------+
+
+	2.3 Instruction Set
+	~~~~~~~~~~~~~~~~~~~
+ This section both talks about the instruction formats and the
+instructions them selfs. There is a table which has all the necessery
+information to start making programs to be run on this model.
+
+	2.3.1 Instruction Formats
+	~~~~~~~~~~~~~~~~~~~~~~~~~
+ The RTPC-architectures instructions can have seven distinct formats:
+
+0    5    8        15
+_____________________
+| OP | N  | J1      |        J1 Format
+
+
+0    4    8    12  15
+_____________________
+| OP | R1 | R2 | R3 |        X Format
+
+
+0    4    8    12  15
+_____________________
+| OP | I  | R2 | R3 |        D-Short Format
+
+
+0         8    12  15
+_____________________
+| OP      | R2 | R3 |        R Format
+
+
+0         8    12                      31
+_________________________________________
+| OP      | R2 | BI                     |        BI Format
+
+
+0         8                            31
+_________________________________________
+| OP      | BA                          |        BA Format
+
+
+0         8    12   16                 31
+_________________________________________
+| OP      | R2 | R3 | I                 |        D Format
+
+
+ To read VHDL-code with many instruction formats is very tedious
+so I decided to use one general format throughout the VHDL-code.
+I call this the General-VHDL Format:
+
+0    4    8    12   16                 31
+_________________________________________
+|OP1 |OP2 | A  | B  | Immi              |        General-VHDL Format
+
+	2.3.2 Table of Instructions
+	~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ In the table below A and B stand for registers and # means a number, so
+the Rasm-format "LCS A,#(B)" means that the instruction LCS has three
+parameters, two registers like R1, R5, R12 or R15 and a number. These
+parameters should be written as the format suggests.
+
+ When reading the description gpA and gpB mean the General Purpose register
+number A and B, besides this the table and the descriptions should be
+pretty clear.
+
+ The RTPC-processor it self can execute all the following instructions,
+which are grouped into ten classes. The VHDL model can also execute
+all of them except for the marked ones. The reason the marked instructions
+are not implemented is mentioned below the table.
+
+1. MEMORY
+
+Rasm-mnemonic	Op Size	Instruction			Description
+---------------	-- ----	-----------------------------	---------------------------------------------------
+LCS	A,#(B)	4   2	Load Character Short		gpA = Byte at mem addr (B=0)?0:gpB + #
+LC	A,#(B)	CE  4	Load Character			gpA = Byte at mem addr (B=0)?0:gpB + #
+LHAS	A,#(B)	5   2	Load Half Algebraic Short	gpA = Word at mem addr (B=0)?0:gpB + 2*#
+LHA	A,#(B)	CA  4	Load Half Algebraic		gpA = Word at mem addr (B=0)?0:gpB + #
+LHS	A,B	EB  2	Load Half Short			gpA = Word at mem addr gpB
+LH	A,#(B)	DA  4	Load Half			gpA = Word at mem add (B=0)?0:gpB + #
+LS	A,#(B)	7   2	Load Short			gpA = Long word at mem addr (B=0)?0:gpB + 4*#
+L	A,#(B)	CD  4	Load				gpA = Long word at mem addr (B=0)?0:gpB + #
+LM	A,#(B)	C9  4	Load Multiple			gp(A..15) = Long words beg at mem addr (B=0)?0:gpB + #
+TSH	A,#(B)	CF  4	Test and Set Half		gpA = Word at mem addr (B=0)?0:gpB + # (mark word read)
+STCS	#(B),A	1   2	Store Character Short		Write Byte from gpA to mem addr (B=0)?0:gpB + #
+STC	#(B),A	DE  4	Store Character			Write Byte from gpA to mem addr (B=0)?0:gpB + #
+STHS	#(B),A	2   2	Store Half Short		Write Word from gpA to mem addr (B=0)?0:gpB + 2*#
+STH	#(B),A	DC  4	Store Half			Write Word from gpA to mem addr (B=0)?0:gpB + #
+STS	#(B),A	3   2	Store Short			Write Long Word from gpA to mem addr (B=0)?0:gpB + 4*#
+ST	#(B),A	DD  4	Store				Write Long Word from gpA to mem addr (B=0)?0:gpB + #
+STM	#(B),A	D9  4	Store Multiple			Write Long Words from gp(A..15) to mem addr (B=0)?0:gpB + #
+
+2. ADDRESS COMPUTATION
+
+Rasm-mnemonic	Op Size	Instruction			Description
+---------------	-- ----	-----------------------------	---------------------------------------------------
+CAL	A,B,#	C8  4	Compute Address Lower Half	gpA = (B=0)?0:gpB + #
+CAL16	A,B,#	C2  4	Compute Address Lower Half 16B	gpA = (B=0)?0:gpB + # (only lower 16 bits)
+CAU	A,B,#	D8  4	Compute Address Upper Half	gpA = (B=0)?0:gpB + #
+CAS	C,A,B	6   2	Compute Address Short		gpC = (B=0)?0:gpB + gpA
+CA16	A,B	F3  2	Compute Address 16-Bit		gpA = gpA + gpB (only lower 16 bits)
+INC	A,#	91  2	Increment			gpA = gpA + #
+DEC	A,#	93  2	Decrement			gpA = gpA - #
+LIS	A,#	A4  2	Load Immediate Short		gpA = #
+
+3. BRANCHING
+
+Rasm-mnemonic	Op Size	Instruction			Description
+---------------	-- ----	-----------------------------	---------------------------------------------------
+BALA	#	8A  4	Branch and Link Absolute	Branch to the even address # - immidiatly
+BALAX	#	8B  4	Branch and Link Absolute X	Branch to the even address # - one delay slot
+BALI	A,#	8C  4	Branch and Link I		Branch relativly to the even address # - immidiatly, gpA=curr.addr
+BALIX	A,#	8D  4	Branch and Link I X		Branch to the even relativ address # - one delay slot, gpA=curr.addr
+BALR	A,B	EC  2	Branch and Link			Branch to even address gpB - immidiatly, gpA=curr.addr
+BALRX	A,B	ED  2	Branch and Link X		Branch to even address gpB - one delay slot, gpA=curr.addr
+JB	#,#	0C1 2	Jump on Condition Bit		Jump to relativ # on # condition - immidiatly
+BB	#,#	8E  4	Branch on Condition Bit I	Branch to relativ # on true # condition - immidiatly
+BBX	#,#	8F  4	Branch on Condition Bit I X	Branch to relativ # on true # condition - one delay slot
+BBR	#,A	EE  2	Branch on Condition Bit		Branch to even address gpA on true # condition - immidiatly
+BBRX	#,A	EF  2	Branch on Condition Bit X	Branch to even address gpA on true # condition - one delay slot
+JNB	#,#	0C0 2	Jump on Not Condition Bit	Jump to relativ # on # condition - immidiatly
+BNB	#,#	88  4	Branch on Not Condition Bit I	Branch to relativ # on false # condition - immidiatly
+BNBX	#,#	89  4	Branch on Not Condition Bit I X	Branch to relativ # on false # condition - one delay slot
+BNBR	#,A	E8  2	Branch on Not Condition Bit	Branch to even address gpA on false # condition - immidiatly
+BNBRX	#,A	E9  2	Branch on Not Condition Bit X	Branch to even address gpA on false # condition - one delay slot
+
+	I : Immediate, X : With Execute, OpCode C1 : Bits "1CCC" and C0 : Bits "0CCC" where CCC is number of condition
+
+4. TRAPS
+
+Rasm-mnemonic	Op Size	Instruction			Description
+---------------	-- ----	-----------------------------	---------------------------------------------------
+TI	#,A,#	CC  4	Trap on Condition Immediate	if gpA<=># then trap (condition depends on #)
+TGTE	A,B	BD  2	Trap if Reg GreaterThan or Eq	if gpA>=gpB then trap
+TLT	A,B	BE  2	Trap if Reg Less Than		if gpA<gpB then trap
+
+5. MOVES AND INSERTS
+
+Rasm-mnemonic	Op Size	Instruction			Description
+---------------	-- ----	-----------------------------	---------------------------------------------------
+MC03	A,B	F9  2	Move Character Zero From Three	gpA(byte 0) = gpB(byte 3)
+MC13	A,B	FA  2	Move Character One From Three	gpA(byte 1) = gpB(byte 3)
+MC23	A,B	FB  2	Move Character Two From Three	gpA(byte 2) = gpB(byte 3)
+MC33	A,B	FC  2	Move Character Three From Three	gpA(byte 3) = gpB(byte 3)
+MC30	A,B	FD  2	Move Character Three From Zero	gpA(byte 3) = gpB(byte 0)
+MC31	A,B	FE  2	Move Character Three From One	gpA(byte 3) = gpB(byte 1)
+MC32	A,B	FF  2	Move Character Three From Two	gpA(byte 3) = gpB(byte 2)
+MFTB	A,B	BC  2	Move From Test Bit		Set a bit in gpA acording to gpB equal to test_bit
+MFTBIL	A,#	9D  2	Move From Test Bit I Lower Half	Set a bit in gpA acording to # equal to test_bit
+MFTBIU	A,#	9C  2	Move From Test Bit I Upper Half	Set a bit in gpA acording to #+16 equal to test_bit
+MTTB	A,B	BF  2	Move to Test Bit		Set test_bit equal to a bit in gpA acording to gpB
+MTTBIL	A,#	9F  2	Move to Test Bit I Lower Half	Set test_bit equal to a bit in gpA acording to #
+MTTBIU	A,#	9E  2	Move to Test Bit I Upper Half	Set test_bit equal to a bit in gpA acording to #+16
+
+	I : Immediate
+
+6. ARITHMETIC OPERATIONS
+
+Rasm-mnemonic	Op Size	Instruction			Description
+---------------	-- ----	-----------------------------	---------------------------------------------------
+A	A,B	E1  2	Add				gpA = gpA + gpB
+AE	A,B	F1  2	Add Extend			gpA = gpA + gpB + carry
+AEI	A,B,#	D1  4	Add Extend Immediate		gpA = gpB + # + carry
+AI	A,B,#	C1  4	Add Immediate			gpA = gpB + #
+AIS	A,#	90  2	Add Immediate Short		gpA = gpA + #
+ABS	A,B	E0  2	Absolute			gpA = abs(gpB)
+ONEC	A,B	F4  2	Ones Complement			gpA = One's complement of gpB
+TWOC	A,B	E4  2	Twos Complement			gpA = Two's complement of gpB
+C	A,B	B4  2	Compare				Compare gpA and gpB
+CIS	A,#	94  2	Compare Immediate Short		Compare gpA and #
+CI	A,#	D4  4	Compare Immediate		Compare gpA and #
+CL	A,B	B3  2	Compare Logical			Compare gpA and gpB (cond.code unsigned)
+CLI	A,#	D3  4	Compare Logical Immediate	Compare gpA and # (cond.code unsigned)
+EXTS	A,B	B1  2	Extend Sign			gpA = extended low word of gpB
+S	A,B	E2  2	Subtract			gpA = gpA - gpB
+SF	A,B	B2  2	Subtract From			gpA = gpB - gpA
+SE	A,B	F2  2	Subtract Extended		gpA = gpB - gpA - carry
+SFI	A,#,B	D2  4	Subtract From Immediate		gpA = # - gpB
+SIS	A,#	92  2	Subtract Immediate Short	gpA = gpA - #
+D	A,B	B6  2	Divide Step			Partial Division
+M	A,B	E6  2	Multiply Step			Partial multiplication
+
+7. LOGICAL OPERATIONS
+
+Rasm-mnemonic	Op Size	Instruction			Description
+---------------	-- ----	-----------------------------	---------------------------------------------------
+CLRBL	A,#	99  2	Clear Bit Lower Half		Clear bit # in lower(gpA)
+CLRBU	A,#	98  2	Clear Bit Upper Half		Clear bit # in upper(gpA)
+SETBL	A,#	9B  2	Set Bit Lower Half		Set bit # in lower(gpA)
+SETBU	A,#	9A  2	Set Bit Upper Half		Set bit # in upper(gpA)
+N	A,B	E5  2	And				gpA = gpA and gpB
+NILZ	A,B,#	C5  4	And Immediate Lower Half EX0	gpA = gpB and {0,#}
+NILO	A,B,#	C6  4	And Immediate Lower Half EX1	gpA = gpB and {1,#}
+NIUZ	A,B,#	D5  4	And Immediate Upper Half EX0	gpA = gpB and {#,0}
+NIUO	A,B,#	D6  4	And Immediate Upper Half EX1	gpA = gpB and {#,1}
+O	A,B	E3  2	Or				gpA = gpA or gpB
+OIL	A,B,#	C4  4	Or Immediate Lower Half		gpA = gpB or {0,#}
+OIU	A,B,#	C3  4	Or Immediate Upper Half		gpA = gpB or {#,0}
+X	A,B	E7  2	Xor				gpA = gpA xor gpB
+XIL	A,B,#	C7  4	Xor Immediate Lower Half	gpA = gpB xor {0,#}
+XIU	A,B,#	D7  4	Xor Immediate Upper Half	gpA = gpB xor {#,0}
+CLZ	A,B	F5  2	Count Leading Zeros		gpA = Count of leading zeros in gpB
+
+	EX0 : Extend Zeros, EX1 : Extend Ones
+
+8. SHIFTS
+
+Rasm-mnemonic	Op Size	Instruction			Description
+---------------	-- ----	-----------------------------	---------------------------------------------------
+SAR	A,B	B0  2	Shift Algebraic Right		gpA = gpA >> lowest 6 bits of gpB (extend sign)
+SARI	A,#	A0  2	Shift Algebraic Right I		gpA = gpA >> # (extend sign)
+SARI16	A,#	A1  2	Shift Algebraic Right I +16	gpA = gpA >> 16+# (extend sign)
+SR	A,B	B8  2	Shift Right			gpA = gpA >> lowest 6 bits of gpB
+SRI	A,#	A8  2	Shift Right I			gpA = gpA >> #
+SRI16	A,#	A9  2	Shift Right I +16		gpA = gpA >> 16+#
+SRP	A,B	B9  2	Shift Right Paired		gp(TWIN) = gpA >> lowest 6 bits of gpB
+SRPI	A,#	AC  2	Shift Right Paired I		gp(TWIN) = gpA >> #
+SRPI16	A,#	AD  2	Shift Right Paired I +16	gp(TWIN) = gpA >> 16+#
+SL	A,B	BA  2	Shift Left			gpA = gpA << lowest 6 bits of gpB
+SLI	A,#	AA  2	Shift Left I			gpA = gpA << #
+SLI16	A,#	AB  2	Shift Left I +16		gpA = gpA << 16+#
+SLP	A,B	BB  2	Shift Left Paired		gp(TWIN) = gpA << lowest 6 bits of gpB
+SLPI	A,#	AE  2	Shift Left Paired I		gp(TWIN) = gpA << #
+SLPI16	A,#	AF  2	Shift Left Paired I +16		gp(TWIN) = gpA << 16+#
+
+	I : Immediate, +16 : Plus Sixteen
+
+9. SYSTEM CONTROL
+
+Rasm-mnemonic	Op Size	Instruction			Description
+---------------	-- ----	-----------------------------	---------------------------------------------------
+MTS	A,B	B5  2	Move to SCR			scrA = gpB
+MFS	A,B	96  2	Move From SCR			gpA = scrB
+CLRSB	A,#	95  2	Clear SCR Bit			clear bit # in scrA
+SETSB	A,#	97  2	Set SCR Bit			set bit # in scrA
+WAIT	#	F0  2	Wait				Used for debugging and to return control to control unit
+LPS		D0  4	Load Program Status				*** Not Implemented
+SVC		C0  4	Supervisor Call					*** Not Implemented
+NOP		0   2	No operation			Does absolutly nothing
+
+10. INPUT/OUTPUT
+
+Rasm-mnemonic	Op Size	Instruction			Description
+---------------	-- ----	-----------------------------	---------------------------------------------------
+IOR		CB  4	Input/Output Read				*** Not Implemented
+IOW		DB  4	Input/Output Write				*** Not Implemented
+
+ Instructions MTS, MFS, CLRSB and SETSB are instructions to work on the
+System Control Registers (SCR). There are 15 scr's in the RTPC-architecture
+but most of them are reserved or not important to us. We have implemented
+two important scr's, the Multiplier Quotient (s10) and the Condition Status
+(s15). So these registers can be used with these instructions but other
+registers are not implemented.
+
+ The implemented part of the SCR is
+
+	0               16            31
+     	________________________________
+SCR10	|                              |        Multiplier Quotient
+SCR15	|XXXXXXXXXXXXXXX|XXXXXXX     X |        Condition Status
+                                ||||| ||
+                                ||||| |31:TestBit
+                                ||||| 30:Overflow
+                                ||||28:CarryZero
+                                |||27:GreaterThan
+                                ||26:EqualTo
+                                |25:LessThan
+                                24:PermanentZero
+
+ Instructions that reference a condition-code, like conditional branches,
+specify the condition-code with a 4 bit number. To find out what condition-
+code is being tested 16 should be added to that number. In the JB and JNB
+instructions the condition-code number is only 3 bit. To find out what
+condition-code is being tested 24 should be added to that number.
+
+ The Input/Output instructions are not implemented yet, but will probably
+be implemented in a future release. There is no actual reason for this
+except that these instructions are used to transfer data between the General-
+Purpose registers and registers in the MMU. As we are not using an MMU then
+why spend time on implementing these instructions.
+
+ LPS and SVC are instructions to control program status, interrupts and
+other stuff that are used in a general purpose operating system. We are not
+conserned with these functions in this model.
+
+ The documentation of the RTPC-architecture that I have does not indicate
+what will happen if instructions JB and JNB are to jump the distance of 0
+(on to themselfs). This would make and infinite loop so instead of this I have
+the model do nothing (the NOP instruction). I used the NOP-instruction
+in the Branch/Jump-test when I couldn't find an instruction to fit into the
+delayed branch instruction slots
+
+3. RUN-TIME DEBUGGING / THE WAIT INSTRUCTION
+============================================
+
+ There is an instruction called "wait" which can be used for runtime debugging
+or to return control to the control unit. I have utilized this instruction
+so that you can call it with various parameters and get one of the following
+written out to the file called "dump.registers":
+
+		- A line to distinguise between individual debug-calls
+		- Condition codes
+		- Contents of a part of or all the registers
+
+The instruction has the following format:
+
+		F0 XX
+		|  ||
+		|  |Register to start from
+		|  |
+		|  Bit 3   - Should a line be printed
+		|  Bit 2   - Should the condition codes be printed
+		|  Bit 1,0 - Number of registers to be printed - 1;
+		|
+		The instruction code
+
+ If the "Register to start from" plus "Number of registers to be printed - 1"
+is equal to 16 then all registers are printed but if the sum exceeds that
+then non is. To stop the running and return control to the control unit you
+use the instruction format F0 FF.
+
+ Some examples are:
+
+	* F0 00 = No line, No cond.codes, 0+1=1 registers starting at reg 0
+	* F0 01 = No line, No cond.codes, 0+1=1 registers starting at reg 1
+	* F0 02 = No line, No cond.codes, 0+1=1 registers starting at reg 2
+	* F0 80 = Pr.Line, No cond.codes, 0+1=1 registers starting at reg 0
+	* F0 86 = Pr.Line, No cond.codes, 0+1=1 registers starting at reg 6
+	* F0 B6 = Pr.Line, No cond.codes, 3+1=4 registers starting at reg 6 (6,7,8 and 9)
+	* F0 F6 = Pr.Line, Pr.cond.codes, 3+1=4 registers starting at reg 6 (6,7,8 and 9)
+	* F0 FC = Pr.Line, Pr.cond.codes, 3+1=4 registers starting at reg C (C,D,E and F)
+	* F0 FD = Pr.Line, Pr.cond.codes, 3+1=4 registers starting at reg D (D+3 = 16 => All registers printed)
+	* F0 FE = Pr.Line, Pr.cond.codes, 3+1=4 registers starting at reg E (E+3 = 17 => No  registers printed)
+	* F0 FF = Print nothing, just return control to control-unit
+
+
+4. ASSEMBLER / RUNNING A PROGRAM
+================================
+
+ In this section I would like to explain how to write a program to be run
+and debugged with the RTPC-model.
+
+ What you want to do is load the memory with one of your programs, then
+have the model run on your code and last but not least you want to be able
+to verify outcome. With the tools, that come with this model, you are able
+to do all that and as the previous section explained, even use run-time
+debugging.
+
+ First of all you make a file with the extension ".asm", this file is to
+contain your program and all the debugging and control information needed
+for the model to execute the code and view the results just the way you
+want it.
+
+ Each line of the file may have some information for the control unit or
+it may be a comment. The first letters of each line indicate if the line
+contains control-information, then line begins with one of the following:
+
+		- "@"		A line starting with this symbol is a line
+				which changes the address at which code
+				is compared or written to memory.
+
+		- "wri"		Oposite to "com", that is the following
+				code is to be written to memory at the
+				indicated addresses. This is the default
+				when the model starts running
+
+		- "run"		Instructs the RTPC-model to start running.
+				The model runs until it hits an wait
+				instruction with the parameters FF.
+
+		- "com"		The following data should be compared
+				to memory at the indicated addresses.
+				If there are some errors then they are
+				written to the file dump.errors
+
+		- "mem"		Dump a part of the memory to the file
+				dump.memory, i.e. mem 40 67 dumps then
+				contents of addresses hex 40 to hex 67.
+			
+		- "qui"		Simulation is to stop completly.
+
+ If a line does not start with one of the above keywords then the line must
+contain code or data to be written or compared to memory. If the control unit
+can't extract code nor data from the line it is discarded as being comment.
+
+ The code lines have the format indicated in the instruction table above.
+Lines that contain data should start with a Double Quote (") or a Equal-
+Sign (=).
+
+I would like to indicate that all numbers in the ".asm" file are considered
+decimal numbers unless they start with the "0x"-prefix, in which case they are
+treated as hexadecimal.
+
+ Last but not least, when an end of file is encountered the simulation is
+stopped completly just as if there had been a quit statement in the file.
+
+ Lets look at an example. To run a program which subtracts two numbers your
+".asm"-file would could something like:
+
+     1	--------------------------------------------------------------------------------
+     2	--
+     3	-- RTPC CPU Benchmark :
+     4	--	Demo program used in the documentation
+     5	--	Subtracts two numbers twice and stores the results
+     6	--
+     7	-- Derived from
+     8	--	ROMP description written in verilog by Edward Czeck et al.
+     9	--	Most likely based on the IBM RT-PC Hardware Technical
+    10	--	Reference (c) 1985 (for RT PC model 10, 20, and 25)
+    11	--
+    12	-- Authors:
+    13	--	Alfred B. Thordarson (abth@ece.uci.edu)
+    14	--	and
+    15	--	Nikil Dutt, professor of CS and ECE
+    16	--	University Of California, Irvine, CA 92717
+    17	--
+    18	-- Changes:
+    19	--	Dec 1, 1993: File created by Alfred B. Thordarson
+    20	--
+    21	--------------------------------------------------------------------------------
+    22	
+    23	write to memory
+    24	
+    25	@ 0x40	-- Code
+    26	
+    27	cau	r2,r0,1
+    28	l	r2,0(r2)
+    29	cau	r3,r0,1
+    30	l	r3,4(r3)
+    31	s	r2,r3
+    32	cau	r3,r0,1
+    33	st	8(r3),r2
+    34	wait	0xfd
+    35	
+    36	cau	r2,r0,1
+    37	l	r2,0x10(r2)
+    38	cau	r3,r0,1
+    39	l	r3,0x14(r3)
+    40	s	r2,r3
+    41	cau	r3,r0,1
+    42	st	0x18(r3),r2
+    43	wait	0xfd
+    44	
+    45	wait	0xff
+    46	
+    47	@ 0x10000
+    48	
+    49	-- Operands A and B and space for result FF FF FF FF
+    50	=00 00 00 01
+    51	=00 00 00 02
+    52	=00 00 00 00
+    53	
+    54	@ 0x10010
+    55	
+    56	-- Operands A and B and space for result 80 00 23 FF
+    57	=0x7f 0xff 0xf0 00
+    58	=0xff 0xff 0xcc 01
+    59	=00 00 00 00
+    60	
+    61	run
+    62	
+    63	compare to memory
+    64	
+    65	@ 0x10008
+    66	=0xff,0xff,0xff,0xff
+    67	@ 0x10018
+    68	=0x80,0,0x23,255
+    69	
+    70	mem 0x10000 0x1001B
+
+ Don't let the line-numbers confuse you, they are merly there to help
+me reference parts of the code in the following explanation.
+
+* The first lines, 1 through 21, obviously would be recognized as comments
+  because they don't start with any of the 6 control-keywords, a mnemonic,
+  a Equal-sign nor a Double Quote, the same thing goes for all empty lines
+  in the file.
+* The first keyword is in line 23. The "wri" means what the line spells out
+  that the following code should be written to memory.
+* The keyword "@" in line 25 then sets the address to hex 40 so the control-
+  unit will start writing to that address.
+* Lines 27 to 45 then hold the code. This code will be written to addresses
+  hex 40 and as far as it needs.
+* The next line in the sequence is 47, which includes a new address.
+* The data in lines 50 to 52 will be written in addresses hex 10000 to
+  hex 1001B.
+* The keyword "run" in line 61 then tells the control-unit to transfer
+  control to the RTPC-model that always starts running at address hex 40. The
+  model then runs the code we just put to memory. When the RTPC-model hits
+  the command wait 0xff (return control) it returns control to the control-
+  unit which continues down the file.
+* Line 63 is the next line to be considered when the code has been run. It
+  contains the keyword "com" which means that the following code should be
+  compared to memory.
+* Line 65 then holds the address to be compared and line 66 holds the data.
+  This data is then compared to memory, starting at address hx 10008.
+* Line 67 holds another address and line 68 the data to be compared to
+  addresses hex 10018 to 1001B. If there are any errors in the comparisons the
+  errors are written to the file "dump.errors".
+* Line 70 is the last line to be considered. It contains the keyword "mem"
+  which dumps a part of the memory to file. The part to be dumped is between
+  addresses hex 10000 to hex 1001B. This is dumped to the file "dump.memory".
+* Finally when the control unit hits the end of the file it asserts a FAILURE
+  and the simulation finishes. If you use the command in the README-file, to
+  run the simulation, this assertation is written to the file "run.out" - just
+  like any other assertions that may appear during your simulation.
+
+ From this overview you should get the general idea of how to write a file that
+includes a program to be run on the RTPC-model. The file "demo.asm" contains the
+file above.
+
+ When you have written your program you should follow the guidelines in the
+README-file to simulate it. The assembler gives you a "program"-file that
+looks something like:
+
+     1	WRI
+     2	@ 40
+     3	D8 20 00 01
+     4	CD 22 00 00
+     5	D8 30 00 01
+     6	CD 33 00 04
+     7	E2 23
+     8	D8 30 00 01
+     9	DD 23 00 08
+    10	F0 FD
+    11	D8 20 00 01
+    12	CD 22 00 10
+    13	D8 30 00 01
+    14	CD 33 00 14
+    15	E2 23
+    16	D8 30 00 01
+    17	DD 23 00 18
+    18	F0 FD
+    19	F0 FF
+    20	@ 10000
+    21	00 00 00 01
+    22	00 00 00 02
+    23	00 00 00 00
+    24	@ 10010
+    25	7F FF F0 00
+    26	FF FF CC 01
+    27	00 00 00 00
+    28	RUN
+    29	COM
+    30	@ 10008
+    31	FF FF FF FF
+    32	@ 10018
+    33	80 00 23 FF
+    34	MEM 10000 1001B
+
+ As you can see this is a compact file, where your code has been translated
+to hexadeciaml numbers. If the simulation doesn't work as you expected you
+can run the assembler with the command "rasm -d file.asm" and it will make
+the "program"-file with all your comments and explanations of what code is
+generated for each line. This would look something like:
+
+     1	--------------------------------------------------------------------------------
+     2	--
+     3	-- RTPC CPU Benchmark :
+     4	--	Demo program used in the documentation
+     5	--	Subtracts two numbers twice and stores the results
+     6	--
+     7	-- Derived from
+     8	--	ROMP description written in verilog by Edward Czeck et al.
+     9	--	Most likely based on the IBM RT-PC Hardware Technical
+    10	--	Reference (c) 1985 (for RT PC model 10, 20, and 25)
+    11	--
+    12	-- Authors:
+    13	--	Alfred B. Thordarson (abth@ece.uci.edu)
+    14	--	and
+    15	--	Nikil Dutt, professor of CS and ECE
+    16	--	University Of California, Irvine, CA 92717
+    17	--
+    18	-- Changes:
+    19	--	Dec 1, 1993: File created by Alfred B. Thordarson
+    20	--
+    21	--------------------------------------------------------------------------------
+    22	
+    23	WRI
+    24	
+    25	@ 40
+    26	
+    27	D8 20 00 01	// cau r2,r0,1
+    28	CD 22 00 00	// l r2,0(r2)
+    29	D8 30 00 01	// cau r3,r0,1
+    30	CD 33 00 04	// l r3,4(r3)
+    31	E2 23      	// s r2,r3
+    32	D8 30 00 01	// cau r3,r0,1
+    33	DD 23 00 08	// st 8(r3),r2
+    34	F0 FD      	// wait 0xfd
+    35	
+    36	D8 20 00 01	// cau r2,r0,1
+    37	CD 22 00 10	// l r2,0x10(r2)
+    38	D8 30 00 01	// cau r3,r0,1
+    39	CD 33 00 14	// l r3,0x14(r3)
+    40	E2 23      	// s r2,r3
+    41	D8 30 00 01	// cau r3,r0,1
+    42	DD 23 00 18	// st 0x18(r3),r2
+    43	F0 FD      	// wait 0xfd
+    44	
+    45	F0 FF      	// wait 0xff
+    46	
+    47	@ 10000
+    48	
+    49	-- Operands A and B and space for result FF FF FF FF
+    50	00 00 00 01
+    51	00 00 00 02
+    52	00 00 00 00
+    53	
+    54	@ 10010
+    55	
+    56	-- Operands A and B and space for result 80 00 23 FF
+    57	7F FF F0 00
+    58	FF FF CC 01
+    59	00 00 00 00
+    60	
+    61	RUN
+    62	
+    63	COM
+    64	
+    65	@ 10008
+    66	FF FF FF FF
+    67	@ 10018
+    68	80 00 23 FF
+    69	
+    70	MEM 10000 1001B
+
+ Now, from this file you can examine more clearly what the assembler
+did. From this file you should be able to see if you made a mistake
+in your Rasm-format or if the assembler is not working correctly.
+
+5. TESTING STRATEGY
+===================
+
+ Ofcourse there is no way to test this model completly because then
+we would have to test all combinations of instructions and all possible
+combinations of parameters. I don't even know if the piece of hardware
+we are modelling here would pass a test like that if it could be performed.
+
+	5.1 Testing strategy
+	~~~~~~~~~~~~~~~~~~~~
+ The best we can do to test if the model is working, as well as we expect,
+we can have it run all the instructions. We can try each instruction with
+one, two or three diffirent parameters to see if all the instructions run
+properly. That is exacly what the "valid_*.asm" files do. Each
+file tests a specific part of the instruction set. The instructions that
+are tested with each of the files can be seen in the table below.
+
+	5.2 Tested instructions
+	~~~~~~~~~~~~~~~~~~~~~~~
+ The names of the files all start with "valid_" to indicate that the
+files are used to validate the model. They all end with ".asm" to
+indicate that these are assembly code files that have to be assemled
+before they will be run on the model. To assemble each of the files you
+do "rasm valid_XXX" which will make the correct "program"-file and then
+you can start the simulator as shown in the README-file. The instructions
+tested in each file are:
+
+FileName	Instruction-Groups		Comments
+---------------	-------------------------------	--------------------
+valid_mem.asm	1. Memory			Loads and stores
+		2. Address Computation
+valid_jmp.asm	3. Branching
+valid_mov.asm	5. Moves and inserts	Uses MFS
+valid_log.asm	7. Logical Operations
+		8. Shifts
+valid_ari.asm	6. Arithmetic Operations	Except for multiply and divide
+valid_msd.asm	6. Arithmetic Operations	Multiply and Divide
+		9. System Control
+valid_trp.asm	4. Traps
+
+ The files are assembled and simulated in this order to make sure all
+instructions used in each file are eather from the instruction being
+tested or from instruction that have already been tested and proved to
+work. But even if this is done I could run into problems with instructions
+that should have been tested earlier. For an example the first file should
+validate all memory-accesses but if I do a load short and then a store
+short to another address, the result could be correct even though the
+load didn't load into the correct part of the designated register. But
+later on, in the move instructions I could run into problems with this
+if a short load instruction doesn't load into the correct byte, I would
+then detect the error during the execution of the "valid_mov.asm"-file and
+correct it at that time. That's the best I can do......
+
+ If some errors arise during simulation the errors will be written
+to one of the files "dump.asserts" og "dump.errors".
+
+	5.3 Testing Conclusions
+	~~~~~~~~~~~~~~~~~~~~~~~
+
+ Lets look at some characterisitcs that the Rasm assembler gives us:
+
+FileName	Instr/Bytes	Data	Comp	Control	RealTime/User/Sys
+---------------	---------------	----	----	-------	-----------------
+valid_mem.asm	159/444		152	240	8	46.2/42.0/ 2.3
+valid_jmp.asm	111/306		0	92	6	23.8/20.3/ 2.0
+valid_mov.asm	83/232		0	108	6	23.7/18.8/ 3.1
+valid_log.asm	144/444		0	144	6	34.6/30.7/ 2.1
+valid_ari.asm	176/566		0	148	6	40.3/36.0/ 2.6
+valid_msd.asm	71/162		0	16	6	16.6/13.0/ 1.8
+valid_trp.asm	8/28		0	0	4	 6.8/ 3.2/ 2.3
+---------------	---------------	----	----	-------	-----------------
+Total		748/2174	152	748	42	 192/ 164/16.2
+
+ Don't think that 748 instructions gives an average of 7 instances of
+each of the 118 instructions. This is incorrect because the INC, ST,
+CAL and CAU are used very often to store and make values. I would guess
+that this testing tested each instruction on the average of 1.3 instances
+and that can and should be improved.
+ The time was measured with the UNIX-command "time" on the SUN-
+computer Clyde on the ICS-net at the University of California, Irvine.

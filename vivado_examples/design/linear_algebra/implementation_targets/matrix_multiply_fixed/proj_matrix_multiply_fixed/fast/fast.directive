@@ -1,0 +1,16 @@
+<AutoPilot:ProjectResources xmlns:AutoPilot="com.autoesl.autopilot.ui.directiveView">
+    <sourceFile name="">
+        <directive functionName="matrix_multiply_fast" label="" functionLabel="">
+            <pragma name="TOP">
+                <option name="name" value="DESIGN_TOP"/>
+            </pragma>
+        </directive>
+        <directive functionName="matrix_multiply_alt2" label="" functionLabel="">
+            <pragma name="RESOURCE">
+                <option name="variable" value="sum_mult" positionalBoolean="4"/>
+                <option name="core" value="RAM_S2P_LUTRAM"/>
+            </pragma>
+        </directive>
+    </sourceFile>
+</AutoPilot:ProjectResources>
+

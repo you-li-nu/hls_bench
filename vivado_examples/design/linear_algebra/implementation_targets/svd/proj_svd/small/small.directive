@@ -1,0 +1,29 @@
+<AutoPilot:ProjectResources xmlns:AutoPilot="com.autoesl.autopilot.ui.directiveView">
+    <sourceFile name="">
+        <directive functionName="svd_small" label="" functionLabel="">
+            <pragma name="TOP">
+                <option name="name" value="DESIGN_TOP"/>
+            </pragma>
+        </directive>
+        <directive functionName="vm2x1_base" label="" functionLabel="">
+            <pragma name="INLINE">
+                <option name="off" value="" positionalBoolean="1"/>
+            </pragma>
+        </directive>
+        <directive functionName="svd_pairs" label="" functionLabel="">
+            <pragma name="ALLOCATION">
+                <option name="instances" value="vm2x1_base" positionalBoolean="4"/>
+                <option name="limit" value="1"/>
+                <option name="function" value="" positionalBoolean="type"/>
+            </pragma>
+        </directive>
+        <directive functionName="svd_pairs" label="" functionLabel="">
+            <pragma name="ALLOCATION">
+                <option name="instances" value="vm2x1_base_1" positionalBoolean="4"/>
+                <option name="limit" value="1"/>
+                <option name="function" value="" positionalBoolean="type"/>
+            </pragma>
+        </directive>
+    </sourceFile>
+</AutoPilot:ProjectResources>
+

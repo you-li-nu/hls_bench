@@ -1,0 +1,261 @@
+%! Postscript File for Waveforms of FALSEPATH_STIM
+
+save
+100 dict begin
+
+/SG { setgray } bind def
+/LW { setlinewidth } bind def
+/M { moveto } bind def
+/L { lineto } bind def
+/S { stroke } bind def
+
+gsave newpath 0 0 moveto
+/Helvetica-Bold findfont dup 10 scalefont setfont
+/PaintType get 0 eq (X0) exch charpath flattenpath pathbbox
+/c_high exch def pop pop pop grestore
+
+/f0 /Helvetica-Bold findfont 54.00 c_high div scalefont def
+/f1 /Helvetica-Bold findfont 45.00 c_high div scalefont def
+
+/F0 { f0 setfont } bind def
+/F1 { f1 setfont } bind def
+
+/rms { rmoveto show } bind def
+/j1 { 1 1 rms } bind def
+/j2 { dup stringwidth pop 2 div neg 1 rms } bind def
+/j3 { dup stringwidth pop 1 add neg 1 rms } bind def
+/j4 { 1 c_high 2 div neg rms } bind def
+/j5 { dup stringwidth pop 2 div neg c_high 2 div neg rms } bind def
+/j6 { dup stringwidth pop 1 add neg c_high 2 div neg rms } bind def
+/j7 { 1 c_high 2 add neg rms } bind def
+/j8 { dup stringwidth pop 2 div neg c_high 2 add neg rms } bind def
+/j9 { dup stringwidth pop 1 add neg c_high 2 add neg rms } bind def
+
+/bar { .2 setlinewidth stringwidth
+pop neg 0 0 c_high .75 add rmoveto rlineto stroke } bind def
+
+/J1 { moveto j1 } bind def
+/J2 { moveto j2 } bind def
+/J3 { moveto j3 } bind def
+/J4 { moveto j4 } bind def
+/J5 { moveto j5 } bind def
+/J6 { moveto j6 } bind def
+/J7 { moveto j7 } bind def
+/J8 { moveto j8 } bind def
+/J9 { moveto j9 } bind def
+
+/CJ1 { moveto gsave dup j1 bar grestore } bind def
+/CJ2 { moveto gsave dup j2 bar grestore } bind def
+/CJ3 { moveto gsave dup j3 bar grestore } bind def
+/CJ4 { moveto gsave dup j4 bar grestore } bind def
+/CJ5 { moveto gsave dup j5 bar grestore } bind def
+/CJ6 { moveto gsave dup j6 bar grestore } bind def
+/CJ7 { moveto gsave dup j7 bar grestore } bind def
+/CJ8 { moveto gsave dup j8 bar grestore } bind def
+/CJ9 { moveto gsave dup j9 bar grestore } bind def
+
+/FRECT   { dup 0 exch rlineto exch 0
+  rlineto 0 exch neg rlineto fill } bind def
+/RECT    { dup 0 exch rlineto exch 0
+  rlineto 0 exch neg rlineto closepath stroke } bind def
+/CLIPBOX { dup 0 exch rlineto exch 0
+  rlineto 0 exch neg rlineto closepath clip newpath } bind def
+
+% End Of Prologue
+
+gsave 592 396 translate 90 rotate
+F0 (FALSEPATH_STIM) 0.00 0.00 J2
+F1 (Sheet 1 of 1) 376.00 0.00 J3
+grestore
+243 128 translate 90 rotate
+.5 LW
+F0 (/FALSEPATH_STIM/RESET) -1.00 -9.00 J6
+(/FALSEPATH_STIM/CLK) -1.00 -27.00 J6
+(/FALSEPATH_STIM/STACKINP) -1.00 -45.00 J6
+(/FALSEPATH_STIM/DATAINP) -1.00 -63.00 J6
+(/FALSEPATH_STIM/OFFSET1INP) -1.00 -81.00 J6
+(/FALSEPATH_STIM/OFFSET2INP) -1.00 -99.00 J6
+(/FALSEPATH_STIM/MADDR) -1.00 -117.00 J6
+644.00 2.00 M -108.00 2.00 L S
+644.00 -128.00 M -108.00 -128.00 L S
+644.00 2.00 M 644.00 -128.00 L S
+0.00 2.00 M 0.00 -128.00 L S
+-108.00 2.00 M -108.00 -128.00 L S
+(0) stringwidth pop 644.00 le {F1 (0) 0.00 8.30 J2
+ } if
+(0) stringwidth pop 644.00 le {(0) 0.00 -134.30 J8
+ } if
+0.00 2.00 M 0.00 7.40 L S
+0.00 -128.00 M 0.00 -133.40 L S
+25.76 2.00 M 25.76 4.70 L S
+25.76 -128.00 M 25.76 -130.70 L S
+51.52 2.00 M 51.52 4.70 L S
+51.52 -128.00 M 51.52 -130.70 L S
+77.28 2.00 M 77.28 4.70 L S
+77.28 -128.00 M 77.28 -130.70 L S
+103.04 2.00 M 103.04 4.70 L S
+103.04 -128.00 M 103.04 -130.70 L S
+128.80 2.00 M 128.80 7.40 L S
+128.80 -128.00 M 128.80 -133.40 L S
+154.56 2.00 M 154.56 4.70 L S
+154.56 -128.00 M 154.56 -130.70 L S
+180.32 2.00 M 180.32 4.70 L S
+180.32 -128.00 M 180.32 -130.70 L S
+206.08 2.00 M 206.08 4.70 L S
+206.08 -128.00 M 206.08 -130.70 L S
+231.84 2.00 M 231.84 4.70 L S
+231.84 -128.00 M 231.84 -130.70 L S
+(400) stringwidth pop 386.40 le {(400) 257.60 8.30 J2
+ } if
+(400) stringwidth pop 386.40 le {(400) 257.60 -134.30 J8
+ } if
+257.60 2.00 M 257.60 7.40 L S
+257.60 -128.00 M 257.60 -133.40 L S
+283.36 2.00 M 283.36 4.70 L S
+283.36 -128.00 M 283.36 -130.70 L S
+309.12 2.00 M 309.12 4.70 L S
+309.12 -128.00 M 309.12 -130.70 L S
+334.88 2.00 M 334.88 4.70 L S
+334.88 -128.00 M 334.88 -130.70 L S
+360.64 2.00 M 360.64 4.70 L S
+360.64 -128.00 M 360.64 -130.70 L S
+386.40 2.00 M 386.40 7.40 L S
+386.40 -128.00 M 386.40 -133.40 L S
+412.16 2.00 M 412.16 4.70 L S
+412.16 -128.00 M 412.16 -130.70 L S
+437.92 2.00 M 437.92 4.70 L S
+437.92 -128.00 M 437.92 -130.70 L S
+463.68 2.00 M 463.68 4.70 L S
+463.68 -128.00 M 463.68 -130.70 L S
+489.44 2.00 M 489.44 4.70 L S
+489.44 -128.00 M 489.44 -130.70 L S
+(800) stringwidth pop 128.80 le {(800) 515.20 8.30 J2
+ } if
+(800) stringwidth pop 128.80 le {(800) 515.20 -134.30 J8
+ } if
+515.20 2.00 M 515.20 7.40 L S
+515.20 -128.00 M 515.20 -133.40 L S
+540.96 2.00 M 540.96 4.70 L S
+540.96 -128.00 M 540.96 -130.70 L S
+566.72 2.00 M 566.72 4.70 L S
+566.72 -128.00 M 566.72 -130.70 L S
+592.48 2.00 M 592.48 4.70 L S
+592.48 -128.00 M 592.48 -130.70 L S
+618.24 2.00 M 618.24 4.70 L S
+618.24 -128.00 M 618.24 -130.70 L S
+644.00 2.00 M 644.00 7.40 L S
+644.00 -128.00 M 644.00 -133.40 L S
+0.00 0.00 M 644.00 -126.00 CLIPBOX
+0.00 -2.70 M 0.00 -2.70 L S
+0.00 -20.70 M 0.00 -20.70 L S
+0.00 -2.70 M 32.20 -2.70 L S
+0.00 -20.70 M 32.20 -20.70 L 32.20 -33.30 L S
+0.00 -2.70 M 64.40 -2.70 L 64.40 -15.30 L S
+32.20 -33.30 M 64.40 -33.30 L 64.40 -20.70 L S
+64.40 -15.30 M 96.60 -15.30 L S
+64.40 -20.70 M 96.60 -20.70 L 96.60 -33.30 L S
+64.40 -15.30 M 128.80 -15.30 L S
+96.60 -33.30 M 128.80 -33.30 L 128.80 -20.70 L S
+0.00 -69.30 M 128.80 -69.30 L S
+128.80 -56.70 M 0.00 -56.70 L S
+128.80 -69.30 M 128.80 -63.00 L 128.80 -56.70 L S
+(3) stringwidth pop 245.00 le {(3) 64.40 -63.00 J5
+ } if
+64.40 -15.30 M 161.00 -15.30 L S
+128.80 -20.70 M 161.00 -20.70 L 161.00 -33.30 L S
+64.40 -15.30 M 193.20 -15.30 L S
+161.00 -33.30 M 193.20 -33.30 L 193.20 -20.70 L S
+0.00 -123.30 M 193.20 -123.30 L S
+193.20 -110.70 M 0.00 -110.70 L S
+193.20 -123.30 M 193.20 -117.00 L 193.20 -110.70 L S
+(0) stringwidth pop 373.80 le {(0) 96.60 -117.00 J5
+ } if
+64.40 -15.30 M 225.40 -15.30 L S
+193.20 -20.70 M 225.40 -20.70 L 225.40 -33.30 L S
+64.40 -15.30 M 257.60 -15.30 L S
+225.40 -33.30 M 257.60 -33.30 L 257.60 -20.70 L S
+128.80 -69.30 M 257.60 -69.30 L S
+257.60 -56.70 M 128.80 -56.70 L S
+128.80 -56.70 M 128.80 -63.00 L 128.80 -69.30 L S
+257.60 -69.30 M 257.60 -63.00 L 257.60 -56.70 L S
+(0) stringwidth pop 232.40 le {(0) 193.20 -63.00 J5
+ } if
+64.40 -15.30 M 289.80 -15.30 L S
+257.60 -20.70 M 289.80 -20.70 L 289.80 -33.30 L S
+64.40 -15.30 M 322.00 -15.30 L S
+289.80 -33.30 M 322.00 -33.30 L 322.00 -20.70 L S
+193.20 -123.30 M 322.00 -123.30 L S
+322.00 -110.70 M 193.20 -110.70 L S
+193.20 -110.70 M 193.20 -117.00 L 193.20 -123.30 L S
+322.00 -123.30 M 322.00 -117.00 L 322.00 -110.70 L S
+(12) stringwidth pop 232.40 le {(12) 257.60 -117.00 J5
+ } if
+64.40 -15.30 M 354.20 -15.30 L S
+322.00 -20.70 M 354.20 -20.70 L 354.20 -33.30 L S
+64.40 -15.30 M 386.40 -15.30 L S
+354.20 -33.30 M 386.40 -33.30 L 386.40 -20.70 L S
+257.60 -69.30 M 386.40 -69.30 L S
+386.40 -56.70 M 257.60 -56.70 L S
+257.60 -56.70 M 257.60 -63.00 L 257.60 -69.30 L S
+386.40 -69.30 M 386.40 -63.00 L 386.40 -56.70 L S
+(1) stringwidth pop 232.40 le {(1) 322.00 -63.00 J5
+ } if
+64.40 -15.30 M 418.60 -15.30 L S
+386.40 -20.70 M 418.60 -20.70 L 418.60 -33.30 L S
+64.40 -15.30 M 450.80 -15.30 L S
+418.60 -33.30 M 450.80 -33.30 L 450.80 -20.70 L S
+322.00 -123.30 M 450.80 -123.30 L S
+450.80 -110.70 M 322.00 -110.70 L S
+322.00 -110.70 M 322.00 -117.00 L 322.00 -123.30 L S
+450.80 -123.30 M 450.80 -117.00 L 450.80 -110.70 L S
+(10) stringwidth pop 232.40 le {(10) 386.40 -117.00 J5
+ } if
+64.40 -15.30 M 483.00 -15.30 L S
+450.80 -20.70 M 483.00 -20.70 L 483.00 -33.30 L S
+64.40 -15.30 M 515.20 -15.30 L S
+483.00 -33.30 M 515.20 -33.30 L 515.20 -20.70 L S
+64.40 -15.30 M 547.40 -15.30 L S
+515.20 -20.70 M 547.40 -20.70 L 547.40 -33.30 L S
+64.40 -15.30 M 579.60 -15.30 L S
+547.40 -33.30 M 579.60 -33.30 L 579.60 -20.70 L S
+450.80 -123.30 M 579.60 -123.30 L S
+579.60 -110.70 M 450.80 -110.70 L S
+450.80 -110.70 M 450.80 -117.00 L 450.80 -123.30 L S
+579.60 -123.30 M 579.60 -117.00 L 579.60 -110.70 L S
+(5) stringwidth pop 232.40 le {(5) 515.20 -117.00 J5
+ } if
+64.40 -15.30 M 611.80 -15.30 L S
+579.60 -20.70 M 611.80 -20.70 L 611.80 -33.30 L S
+64.40 -15.30 M 644.00 -15.30 L S
+611.80 -33.30 M 644.00 -33.30 L 644.00 -20.70 L S
+0.00 -51.30 M 644.00 -51.30 L S
+644.00 -38.70 M 0.00 -38.70 L S
+644.00 -51.30 M 644.00 -45.00 L 644.00 -38.70 L S
+(4) stringwidth pop 1275.40 le {(4) 322.00 -45.00 J5
+ } if
+386.40 -69.30 M 644.00 -69.30 L S
+644.00 -56.70 M 386.40 -56.70 L S
+386.40 -56.70 M 386.40 -63.00 L 386.40 -69.30 L S
+644.00 -69.30 M 644.00 -63.00 L 644.00 -56.70 L S
+(2) stringwidth pop 490.00 le {(2) 515.20 -63.00 J5
+ } if
+0.00 -87.30 M 644.00 -87.30 L S
+644.00 -74.70 M 0.00 -74.70 L S
+644.00 -87.30 M 644.00 -81.00 L 644.00 -74.70 L S
+(8) stringwidth pop 1275.40 le {(8) 322.00 -81.00 J5
+ } if
+0.00 -105.30 M 644.00 -105.30 L S
+644.00 -92.70 M 0.00 -92.70 L S
+644.00 -105.30 M 644.00 -99.00 L 644.00 -92.70 L S
+(2) stringwidth pop 1275.40 le {(2) 322.00 -99.00 J5
+ } if
+579.60 -123.30 M 644.00 -123.30 L S
+644.00 -110.70 M 579.60 -110.70 L S
+579.60 -110.70 M 579.60 -117.00 L 579.60 -123.30 L S
+644.00 -123.30 M 644.00 -117.00 L 644.00 -110.70 L S
+(2) stringwidth pop 103.60 le {(2) 611.80 -117.00 J5
+ } if
+showpage
+
+end
+restore

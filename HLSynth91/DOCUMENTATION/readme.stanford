@@ -1,0 +1,120 @@
+
+#
+#	Olympus Synthesis System 
+#	Stanford University, July 1990
+#
+
+Instructions for unpacking:
+
+	If you have received the shar file (ends in .sh )please type:
+
+		mkdir <benchmark>
+		sh <shar file name>
+
+
+	If you have received the uuencoded file (ends in .uu) please type:
+
+		uudecode <name of file saved from mail>
+		compress -d <benchmark>.tar.Z
+		tar xvf <benchmark>.tar
+
+
+
+
+
+High-Level Synthesis benchmarks suite as of July 20, 1990:
+
+Name			Distribution Files	Description
+----			------------------	-----------
+
+1. daio_receiver	daior.sh, daior.uu	DAIO Receiver
+2. daio_phase_decoder	daiop.sh, daiop.uu	DAIO Phase Decoder
+3. diffeq		diffeq.sh, diffeq.uu	Differential Equation Solver
+4. ecc			ecc.sh, ecc.uu		Error Correction System
+5. elliptic		ellip.sh, ellip.uu	Fifth Order Elliptic Filter
+6. frisc		frisc.sh, frisc.uu	RISC Microprocessor
+7. gcd			gcd.sh, gcd.uu		Greatest Common Divisor Alg.
+8. parker1986		parker.sh, parker.uu	Example from Alice Parker 1986
+9. traffic		traffic.sh, traffic.uu	Traffic Light Controller
+10. tseng		tseng.sh, tseng.uu	Example from Tseng
+
+in addition, "library.hc" contains description of library templates
+for commonly used `data-path' operations.
+
+
+
+BRIEF OVERVIEW:
+===============
+	
+			     | HardwareC (.hc)
+			     |
+			     |
+			     v
+			+-----------+
+Behavioral		| HERCULES  |
+Synthesis		+-----------+
+			     |
+			     | Sequencing Intermediate Form (SIF)
+			     | (.sif)
+			     |
+			     | + input patterns (.pat)
+			     v
+Behavioral		+-----------+
+Simulation		| ARIADNE   |
+			+-----------+
+			     |
+			     | simulation outputs (.sim, .out)
+			     v
+Design Space		+-----------+
+Exploration &		|   HEBE    |
+Structural		+-----------+
+Synthesis		     |
+			     | Structure/Logic Intermediate Form (SLIF)
+			     | (.slif)
+			     | 
+			     | + input patterns (.pat) 
+			     v
+Structural		+-----------+
+Simulation		|  MERCURY  |
+			+-----------+
+			     | 
+			     | simulation outputs (.sim) 
+			     | 
+	
+			Technology Mapping...
+
+
+
+NOTES:
+======
+
+	1. All of these benchmarks have been simulated for correct
+	operation at behavioral level.
+
+	2. Most of these examples have also been synthesized and 
+	simulated at logic level for correct operation.
+
+
+File Naming Methodology:
+
+	.hc 		behavior description in HardwareC
+	.sif		SIF Description files
+	.slif		SLIF Description files
+	.pat		Input pattern files 
+	.mon		list and format of vectors to be extracted by ARIADNE
+	.sim.gold	verified simulation outputs from ARIADNE
+
+	.out.gold	verified simulation outputs from ARIADNE 
+			with vectors extracted using .mon file
+
+	.slifsim.gold	verified simulation outputs from MERCURY
+			using ARIADNE compatible mode of simulation
+
+	test/		this directory contains information on running
+			test simulations
+
+	test/verify.<>	script to run SIF/SLIF simulations
+
+
+
+

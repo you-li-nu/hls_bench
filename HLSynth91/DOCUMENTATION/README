@@ -1,0 +1,68 @@
+  High Level Synthesis Benchmarks, 1991.
+
+  Benchmark coordinator, Robert Mayo (mayo@decwrl.dec.com)
+  MCNC site coordinator, Jeri Williams (benchmarks@mcnc.org)
+  MCNC files prepared by: Douglas Maltais.
+
+  The 1991 High Level Synthesis Workshop Benchmarks were originally
+  copied to the MCNC file distribution center during October of 1990.
+  The files contained in the 1991 set include all of the benchmarks of
+  the 1989 set, plus new files from Giovanni De Micheli of Stanford U.
+  This benchmark set is available through MCNC's public ftp access system.
+
+  The files are also available from the original site via automatic e-mail.
+  This is generally a slower method of transferring files. To request one or
+  more files from DEC, rather than MCNC, send e-mail to ``hlsw@decwrl.dec.com''.
+  The body of the letter should contain one or more lines of the form:
+
+    Request: <files>
+
+  where <files> is a blank separated list of desired files.  Unix(tm)
+  wild card characters may be used.  Request the file ``welcome'' for
+  more details.
+
+  A mailing list of people interested in the High Level Synthesis
+  is being maintained.  To send to these people, use the address
+  ``hlsw-people@decwrl.dec.com''.  To be added or deleted from this
+  mailing list, send to ``hlsw-request@decwrl.dec.com''.
+
+  Files in /pub/benchmark/HLSyhth91/DOCUMENTATION which are part of
+  the original (from ``hlsw@decwrl.dec.com'') documentation:
+
+    bench.doc  doc.v  stanford.readme
+
+  Listing of files contained in /pub/benchmark/HLSynth91/DATA
+
+       579  4count.v
+     15048  blit.c
+       959  count_control.vhd
+       712  counter.vhd
+     89497  daiop.sh
+    239063  daior.sh
+    123344  diffeq.sh
+     53662  ecc.sh
+     93933  ellip.sh
+       504  fft.doc
+    231601  frisc.sh
+     44264  gcd.sh
+       424  gcd.v
+       431  gcd.vhd
+       907  gcd_control.vhd
+      4153  i8251.doc
+      8045  i8251.hc
+      9804  i8251.isp
+      4511  kalmanio.isp
+      2649  library.hc
+     12911  mc6502.isp
+     69039  mc68000.isp
+       966  mtlc.v
+     38424  parker.sh
+      1138  pf_control.vhd
+       852  pitch.doc
+      1090  prefetch.v
+       783  prefetch.vhd
+      1265  tlc.vhd
+       810  tlc_control.vhd
+     11959  traffic.sh
+    155350  tseng.sh
+       151  vvectors.vhd

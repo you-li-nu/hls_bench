@@ -1,0 +1,660 @@
+--------------------------------------------------------------------------------
+--
+--   Prawn CPU Benchmark Documentation
+--
+-- Derived from
+--           Parwan : a reduced processor
+--           from Chapter 9 of NAVABI : "VHDL: Analysis and Modeling of
+--           Digital Systems" McGraw-Hill,Inc. 1993
+--
+-- Additional Features: interrupt, stack, and conditions for
+--           conditional branch have been added.
+--
+-- Author: Tadatoshi Ishii
+--         Information and Computer Science,
+--         University Of California, Irvine, CA 92717
+--
+-- Written on Nov 1, 1992
+--
+--------------------------------------------------------------------------------
+
+================================================================================
+(1) Introduction
+
+
+     Prawn is a simple eight-bit microprocessor based on the sample processor
+
+described in Chapter 9 of "VHDL : Analysis and Modeling of Digital Systems"
+
+by Z. Navabi, McGraw-Hill,Inc. 1993.  We have added some features such as
+
+interrupt, stack and some conditions for conditional branch to the example in
+
+the book.
+
+
+     Some of the requirements for this benchmark are listed below:
+
+
+  1) All basic CPU functions should be represented.
+
+  2) It should use a simple architecture which can be easily mapped into
+
+     hardware with existing synthesis tools.
+
+  3) The design must be simple enough to allow manual verification.
+
+  4) The design should have a complete set of test vectors that exercises all
+  
+     processor functions.
+
+
+================================================================================
+(2) Prawn CPU
+
+
+     Based on the requirements, Prawn is an eight-bit processor which has an
+
+8-bit Data Bus and a 12-bit Address Bus for external accesses.  It has a
+
+limited number of arithmetic and logic instructions, several jump and branch
+
+instructions, subroutine call instructions, and interrupt instructions.  Some
+
+instructions have an addressing mode, which provides for direct and indirect
+
+addressing.  Prawn has an accumulator, a reduced ALU, a shifter, program
+
+counter, and five flags (interrupt enable, overflow, carry, zero, sign).  It
+
+uses a designated address of memory as a stack pointer register. 
+
+
+
+(2.1) Ports
+
+
+Table 1 : INPUT AND OUTPUT PORTS:
+
++----------+-------+-----+-----------------------------------------------------+
+|    PORT  | TYPE  |BIT  |                                                     |
+|          |       |WIDTH|      DESCRIPTION                                    |
++----------+-------+-----+-----------------------------------------------------+
+|      clk |    in |  1  | clk                                                 |
++----------+-------+-----+-----------------------------------------------------+
+|    reset |    in |  1  | reset (active HIGH)                                 |
++----------+-------+-----+-----------------------------------------------------+
+| read-mem |   out |  1  | Read memory (active HIGH)                           |
++----------+-------+-----+-----------------------------------------------------+
+|write-mem |   out |  1  | Write memory (active HIGH)                          |
++----------+-------+-----+-----------------------------------------------------+
+|  databus | inout |  8  | Data input/output to/from chip                      |
++----------+-------+-----+-----------------------------------------------------+
+|    adbus |   out | 12  | Address output from chip                            |
++----------+-------+-----+-----------------------------------------------------+
+|interrupt |    in |  1  | interrupt input to chip (active HIGH)               |
++----------+-------+-----+-----------------------------------------------------+
+|     inta |   out |  1  | interrupt acknowledge output from chip (active HIGH)|
++----------+-------+-----+-----------------------------------------------------+
+
+
+(2.2) Block Diagram
+
+
+     Since we describe Prawn with a behavioral model, its implementation
+     
+could be realized with any kind of bus structure.  We present a sample Block
+
+Diagram for the Prawn CPU to facilitate understanding of its behavior.
+
+
+Figure 1 : Block Diagram of Prawn CPU
+
+
+                       +----------------------------------------+
+                databus|  Memory                                |adbus
+                  +<-->|   4096          F:00-FE Stack Area     |<---+
+                  |    |   bytes         F:FF Stack Pointer Reg |    |
+Memory            |    +----------------------------------------+    |
+------------------------------------------------------------------------
+Prawn CPU         |                                                  |
+                  |                                                  |
+      -----+------+-----------------------------+                    |
+      ^    |           ^                        |                    |
+      |    |           |                        |                    |
+      |    |       +---+------+                 |                    |
+      |    |       |   |      |                 |                    |
+      |    |       V   |      V                 |                    |
+      |    |     +---+ |  +---------------+     |                    |
+      |    |     |Acc| |  |Instruction Reg|     |                    |
+      |    |     +---+ |  +---------------+     |                    |
+      |    |       |   |      |                 |                    |
+      |    V       V   |      +--------------+  |                    |
+      |   ----   ----  |      |              |  |              +-----+
+      +-->\   \_/   /  |      V              |  |              |     |
+      |    \  ALU  /   |  +---------------+  |  |              V     |
+      |    |\_____/    |  |   SEQUENCER   |  |  |  +---------------+ |
+      |    |   |       |  |               |  |  |  |Program Counter| |
+      |    V   V       |  |               |  |  |  +---------------+ |
+      |  +-------+     |  +---------------+  |  +----------+   |     |
+      |  |SHIFTER|     |    ^ ^ ^ |   | |    +---------+   |   |     |
+      |  +-------+     |    | | | |   | |              V   V   V     |
+      |    |   |       |    | | | |   | |           +-------------+  |
+      |    |   +-->----+    | | | |   | |           | address reg |  |
+      |    V   V            | | | |   | |           +-------------+  |
+      |  +------+           | | | |   | |                  |         |
+      |  | FLAG |           | | | |   | V                  |         |
+      |  +------+           | | | |   V  read_mem          +---------+
+      |     |               | | | V   write_mem
+      +--<--+---->----------+ | | inta
+                              | interrupt
+                              reset
+
+
+(2.3) Memory Organization
+
+
+     Prawn has a 12-bit address bus, which is partitioned into sixteen pages
+     
+of 256 bytes each.  The four most significant bits of the address are for the
+
+page address and the remaining eight bits of the address are for the offset.
+
+The addresses are usually written in hexadecimal.  The page address and
+
+offset are separated by ":".  These page areas are not continuous.  The last
+
+Page is reserved for the stack area.  The address F:FF is used for the stack
+
+pointer.  Prawn's I/O is memory mapped.
+
+
+
+(2.4) Instruction Set
+
+
+     Table 2 summarizes Prawn's instruction set.  The column labeled "Flags"
+
+indicates flags used or set by individual instructions.  The column "Clock"
+
+defines the number of clock cycles for each instruction.
+
+     Prawn has single byte instructions and double byte instructions.  Many
+     
+of the double byte instructions have two addressing modes: direct and
+
+indirect.  For a double byte instruction, the 3 MSB of the first byte
+
+determines its opcode, while the next bit determines direct(0) or indirect(1)
+
+addressing.
+
+
+     The "RESERVED" instruction indicates the reserved instruction for future
+     
+extensions of Prawn.
+
+
+     This VHDL behavior model of Prawn treats undefined instructions as
+
+No-Ops.  You may treat these undefined instructions as "don't care
+
+instructions".  Prawn does not have a trap mechanism to detect these
+
+"Undefined Instructions".
+
+
+Table 2 : Instruction set
+
++------------------------------------------------------------------------------+
+|Double Byte Instructions w/ direct/indirect address                           |
++--------+------------+------+---------------------+--------------+------------+
+|Mnemonic|First Byte  |Second|Description	   |Flags(use/set)|Clock(d/ind)|
++--------+------------+------+---------------------+--------------+------------+
+|LDA  loc|000 0/1 page|offset|ac <- memory	   |-----/---zs   |2/3         |
++--------+------------+------+---------------------+--------------+------------+
+|AND  loc|001 0/1 page|offset|ac <- ac and memory  |-----/---zs   |2/3         |
++--------+------------+------+---------------------+--------------+------------+
+|ADD  loc|010 0/1 page|offset|ac <- ac + memory	   |--c--/-vczs   |2/3         |
++--------+------------+------+---------------------+--------------+------------+
+|SUB  loc|011 0/1 page|offset|ac <- ac - memory	   |--c--/-vczs   |2/3         |
++--------+------------+------+---------------------+--------------+------------+
+|JMP  loc|100 0/1 page|offset|long range JMP, allow|-----/-----   |2/3         |
+|        |            |      |advance of pc beyond the page limit |            |
++--------+------------+------+---------------------+--------------+------------+
+|STA  loc|101 0/1 page|offset|memory <- ac	   |-----/-----   |2/3         |
++--------+------------+------+---------------------+--------------+------------+
+
++------------------------------------------------------------------------------+
+|Double Byte Instructions w/ direct address				       |
++----------+----------+------+----------------------------+--------------+-----+
+|Mnemonic  |First Byte|Second|Description		  |Flags(use/set)|Clock|
++----------+----------+------+----------------------------+--------------+-----+
+|JSR    loc|110 0 page|offset|long range JMP to subroutine|-----/-----   |6    |
+|          |          |      |allow advance of pc beyond the page limit  |     |
++----------+----------+-----------------------------------+--------------+-----+
+|RESERVED  |110 1 0000|reserved for ESC code for future instructions	       |
++----------+----------+--------------------------------------------------------+
+|UNDEF	   |110 1 0001|						               |
+|UNDEF	   |110 1 0010|					      	               |
+|UNDEF	   |110 1 0011|					     	               |
+|UNDEF	   |110 1 0100|						               |
+|UNDEF	   |110 1 0101|						               |
+|UNDEF	   |110 1 0110|						               |
+|UNDEF	   |110 1 0111|						               |
+|UNDEF	   |110 1 1000|						               |
+|UNDEF	   |110 1 1001|						               |
+|UNDEF	   |110 1 1010|						               |
+|UNDEF	   |110 1 1011|						               |
+|UNDEF	   |110 1 1100|						               |
+|UNDEF	   |110 1 1101|						               |
+|UNDEF	   |110 1 1110|						               |
++----------+----------+--------------------------------------------------------+
+
++------------------------------------------------------------------------------+
+|Single Byte Instruction						       |
++--------+----------+---------------------------+---------------+--------------+
+|Mnemonic|First Byte|Description	        |Flags(use/set) |Clock         |
++--------+----------+---------------------------+---------------+--------------+
+|JRT	 |110 1 1111|long range RET(from JSR)   |-----/-----    |5             |
++--------+----------+---------------------------+---------------+--------------+
+|NOP	 |111 0 0000|No operation	        |-----/-----    |1             |
++--------+----------+---------------------------+---------------+--------------+
+|CLA	 |111 0 0001|clear ac		        |-----/-----    |1             |
++--------+----------+---------------------------+---------------+--------------+
+|CMA	 |111 0 0010|complement ac	        |-----/---zs    |1             |
++--------+----------+---------------------------+---------------+--------------+
+|BRT     |111 0 0011|short range RET(from BSR)  |-----/-----    |4             |
++--------+----------+---------------------------+---------------+--------------+
+|CMC	 |111 0 0100|complement carry flag      |--c--/--c--    |1             |
++--------+----------+---------------------------+---------------+--------------+
+|STI	 |111 0 0101|set interrupt enable flag  |-----/i----    |1             |
++--------+----------+---------------------------+---------------+--------------+
+|IRT	 |111 0 0110|RET from interrupt         |-----/ivczs    |6             |
++--------+----------+---------------------------+---------------+--------------+
+|CLI	 |111 0 0111|clear interrupt enable flag|-----/i----    |1             |
++--------+----------+---------------------------+---------------+--------------+
+|ASL	 |111 0 1000|arithmetic shift left	|-----/-vczs    |1             |
++--------+----------+---------------------------+---------------+--------------+
+|ASR	 |111 0 1001|arithmetic shift right	|-----/---zs    |1             |
++--------+----------+---------------------------+---------------+--------------+
+|ROL     |111 0 1010|rotate left	        |-----/---zs    |1             |
++--------+----------+---------------------------+---------------+--------------+
+|ROR     |111 0 1011|rotate right               |-----/---zs    |1             |
++--------+----------+---------------------------+---------------+--------------+
+|PUSH	 |111 0 1100|push ac to stack		|-----/-----    |4             |
++--------+----------+---------------------------+---------------+--------------+
+|PUSHF	 |111 0 1101|push flag to stack		|ivczs/-----    |4             |
++--------+----------+---------------------------+---------------+--------------+
+|POP	 |111 0 1110|pop ac from stack		|-----/-----    |4             |
++--------+----------+---------------------------+---------------+--------------+
+|POPF	 |111 0 1111|pop flag from stack	|-----/ivczs    |4             |
++--------+----------+---------------------------+---------------+--------------+
+
++------------------------------------------------------------------------------+
+|Branch Instruction w/ direct address   				       |
++----------+----------+------+-------------------------------+-----------+-----+
+|Mnemonic  |First Byte|Second|Condition/Description          |Flags(u/s) |Clock|
++----------+----------+------+-------------------------------+-----------+-----+
+|BRA_N	loc|111 1 0000|offset|if negative                    |----s/-----|2    |
++----------+----------+------+-------------------------------+-----------+-----+
+|BRA_NN	loc|111 1 0001|offset|if not negative                |----s/-----|2    |
++----------+----------+------+-------------------------------+-----------+-----+
+|BRA_Z	loc|111 1 0010|offset|if zero		             |---z-/-----|2    |
++----------+----------+------+-------------------------------+-----------+-----+
+|BRA_NZ	loc|111 1 0011|offset|if not zero	             |---z-/-----|2    |
++----------+----------+------+-------------------------------+-----------+-----+
+|BRA_C	loc|111 1 0100|offset|if carry		             |--c--/-----|2    |
++----------+----------+------+-------------------------------+-----------+-----+
+|BRA_NC	loc|111 1 0101|offset|if not carry	             |--c--/-----|2    |
++----------+----------+------+-------------------------------+-----------+-----+
+|BRA_HI	loc|111 1 0110|offset|if high		             |--cz-/-----|2    |
++----------+----------+------+-------------------------------+-----------+-----+
+|BRA_LO	loc|111 1 0111|offset|if low		             |--cz-/-----|2    |
++----------+----------+------+-------------------------------+-----------+-----+
+|BRA_V	loc|111 1 1000|offset|if overflow	             |-v---/-----|2    |
++----------+----------+------+-------------------------------+-----------+-----+
+|BRA_NV	loc|111 1 1001|offset|if not overflow	             |-v---/-----|2    |
++----------+----------+------+-------------------------------+-----------+-----+
+|BRA_LT	loc|111 1 1010|offset|if less than	             |-v--s/-----|2    |
++----------+----------+------+-------------------------------+-----------+-----+
+|BRA_GE	loc|111 1 1011|offset|if greater than or equal       |-v--s/-----|2    |
++----------+----------+------+-------------------------------+-----------+-----+
+|BSR    loc|111 1 1100|offset|short range JMP to subroutine  |-----/-----|5    |
+|          |          |      |allow advance of pc within the page limit  |     |
++----------+----------+------+-------------------------------+-----------+-----+
+|BRA	loc|111 1 1101|offset|always, short range JMP        |-----/-----|2    |
+|          |          |      |allow advance of pc within the page limit  |     |
++----------+----------+------+-------------------------------+-----------+-----+
+|BRA_LE	loc|111 1 1110|offset|if less than of equal          |-v-zs/-----|2    |
++----------+----------+------+-------------------------------+-----------+-----+
+|BRA_GT	loc|111 1 1111|offset|if greater than                |-v-zs/-----|2    |
++----------+----------+------+-------------------------------+-----------+-----+
+
+
+
+(2.5) Addressing Mode
+
+
+     If an instruction has a page operand and an offset operand for the
+     
+location of its data, it is in full addressing mode;  this mode can have both
+
+direct and indirect addressing.  If an instruction has only an offset operand
+
+for the location of its data, it is in page addressing mode, where the
+
+effective address is obtained by concatenating the page address of the
+
+instruction with the offset operand.  In the page addressing mode, an
+
+instruction can only reference memory locations within the page where the
+
+instruction appears.
+
+
+     In the direct addressing mode, the effective address is obtained by
+
+concatenating the page operand with the offset operand of the instruction.
+
+In the indirect addressing mode, the offset for the effective address is
+
+fetched from the memory location of the address obtained by concatenating the
+
+page operand and the offset operand of the instruction.  Because of the page
+
+separation, the page part of the effective address is the same as the
+
+instruction's page itself.
+
+
+
+(2.6) Stack and Subroutine
+
+
+     The Prawn CPU treats the last page of memory (locations F:00 to F:FE) as
+
+the stack area, and address F:FF as the stack pointer.  During initialization
+
+of the Prawn CPU, the stack pointer must point to the memory address F:FE, so
+
+that the subroutine, push, pop and interrupt mechanisms of the CPU can use
+
+the stack automatically.  This initialization of the stack pointer is done by
+
+loading 'FE' to the memory at location F:FF.
+
+
+     The JSR instruction includes the operation which pushes the return
+     
+address (both page and offset) to the stack.  The JRT instruction pops the
+
+return address from stack and changes the control flow of the Prawn CPU to
+
+its return point.  The BSR and BRT instructions push and pop only the offset
+
+part of the return address.  BSR has only the offset part of address at which
+
+the subroutine starts.  These two instruction are used for calling and 
+
+returning from subroutines in the same page as the instructions.
+
+
+     The PUSH and POP instructions also increment and decrement the stack
+     
+pointer, respectively.
+
+
+     The Prawn CPU has no trap mechanism to indicate a stack overflow or
+     
+underflow. The programmer should ensure that the stack does not overflow or
+
+underflow.
+
+
+
+(2.7) Interrupt
+
+
+     The Prawn CPU has 2 interrupt ports.  One is a "reset" and other is a
+
+"interrupt".  Both interrupt ports are checked at the end of the current
+
+instruction.  Of course, "reset" has higher priority than "interrupt".
+
+
+     When enbaled, the "reset" port stops all operations of the Prawn CPU.
+     
+It clears the PC, flags, and adbus.  It sets the output data on databus to
+
+high impedance.  After "reset" is disabled, the Prawn CPU fetches its first
+
+instruction from the memory location 0:00.
+
+
+     The "interrupt" port is activated by I/O systems, and stays high until
+     
+the Prawn CPU returns "inta", the interrupt acknowledge signal.  The Prawn
+
+CPU activates "inta" after the operation of current instruction is finished
+
+and if the interrupt enable flag is set.  The system that sends an
+
+"interrupt" to the CPU should consider "inta" as "read_mem" for fetching the
+
+start address of the interrupt service routine which services the interrupt
+
+request.  Because the Prawn CPU has a 12-bit address, the CPU needs two
+
+cycles to get the address.  The CPU sends "inta" twice with the same timing
+
+as "read_mem".  The CPU should be given the page part of the start address
+
+for the interrupt service routine at the first "inta", and the offset at the
+
+second "inta".
+
+
+     After address is given to the CPU, Prawn pushes the return address and
+     
+flags onto its stack and clears the interrupt enable flag.  Then it changes
+
+its flow of control to the interrupt service routine.
+
+
+     IRT should be used for returning from interrupt service routine.  It
+     
+pops the flags and return address from stack and changes the control flow of
+
+Prawn to its original routine.
+
+
+
+================================================================================
+(3) VHDL behavioral model developed for the Prawn CPU
+
+
+     This behavioral model is written with MVL7 and one package which is also
+     
+written with MVL7. The following files are used:
+
+
+"types.vhdl"		: definition & basic functions of MVL7
+
+"MVL7_functions.vhdl"	: utility functions for MVL7
+
+"cpu.vhdl"		: behavioral model of Prawn CPU as a single VHDL
+
+			  process.
+
+"lib.vhdl"		: package for behavioral model of Prawn CPU
+
+"tst*.vhdl"             : behavioral memory models which contain programs
+
+			  for verifying functionality of Prawn CPU
+
+"sim.vhdl"              : connection model between memory model and Prawn CPU
+
+
+
+================================================================================
+(4) Testing strategy
+
+
+     The model of the Prawn CPU has been tested with the set of test vectors
+
+contained in files having prefix "tst".
+
+
+     Each test vector file consists of two sets of memories and one process
+
+for simulation control. The first set of memories, called the Working Set,
+
+contains the program, data, and working areas for the Prawn CPU.  These are
+
+executed and used by the Prawn CPU during simulation.  The second set, called
+
+Expected Set, has the expected contents for the set of memories when a
+
+correct simulation is finished.
+
+
+     The control process in test vector files controls the simulation by
+     
+itself.  After a simulation is started, the control process controls access
+
+to the Working Set and continues Prawn's execution until the end of the test
+
+vector is detected.  We employ the following method to detect the end of each
+
+test vector.  When executed correctly, each simulation ends at an address
+
+(say, ADDR1) containing an instruction that repeatedly jumps to itself.  If
+
+an error is detected during simulation due to an illegal flag condition, the
+
+simulation jumps to another address location (say, ADDR2) also containing an
+
+instruction that repeatedly jumps to itself.  The control process stops
+
+Prawn's execution by stopping the service of memory access when these special
+
+addresses (ADDR1 and ADDR2) are accessed.
+
+
+     When Prawn is stopped, the control process compares the contents of the
+     
+two sets of memories, and terminates the simulation itself using a severity
+
+function. If a difference is found between the two sets of memories, the
+
+simulation is stopped with severity FAILURE.  If no difference is found,
+
+which means no error, the simulation is stopped with severity ERROR.
+
+
+     The simulation time of each test vector can be calculated according to
+     
+the cycle time for execution of each Prawn CPU instruction, as described in
+
+Table2. However, even if your synthesized model has different execution
+
+cycles for any instruction, you need not change any test vectors.  The test
+
+vectors are independent of changes in the interface timing between Prawn and
+
+the memories, as well as changes in the cycle time of any instruction.  The
+
+tests only check the contents of memories after execution is completed.
+
+
+     The Prawn CPU is simulated with one of these test vector files at each
+     
+time and both are connected by the VHDL model which is in the file named
+
+"sim.vhdl". The VHDL model in "sim.vhdl" looks at the VHDL model of the test
+
+vector file as "mem.vhdl".  After selecting a specific test vector file for
+
+simulation, you must copy that file over to "mem.vhdl" and then start your
+
+VHDL simulation.
+
+
+     The file labeled "Makefile" has a simulation script for the Zycad VHDL
+     
+simulator v1.0. This may help you learn how to simulate the Prawn CPU.
+
+
+
+(4.1)  Test Sets
+
+
+     Each test vector file contains a program that specifically tries to
+     
+verify the functionality of some of Prawn's instructions.  Verification of
+
+Prawn's overall functionality should at least exercise all of the test vector
+
+files that are intended to cover all individual operations of the Prawn CPU.
+
+
+
+================================================================================
+(5) Tested Functions
+
+
+	The following test vector files have been simulated on the Prawn CPU
+
+model using the Zycad VHDL simulator v1.0.
+
+
+      Test File 	Tested instructions
+      ---------		-------------------
+
+      tstop1.vhdl	lda direct
+			sta direct
+
+      tstop2.vhdl	cla
+			cma
+			cmc
+			asl
+			asr
+			nop
+
+      tstop3.vhdl	and direct/indirect
+
+      tstop4.vhdl	add direct/indirect
+
+      tstop5.vhdl	sub direct/indirect
+
+      tstop6.vhdl	jmp direct/indirect intra-page/inter-page
+
+      tstop7.vhdl	ror
+			rol
+
+      tstop8.vhdl	push
+			pop
+			pushf
+			popf
+
+      tstop9.vhdl	bra_?? (14 types of conditions)
+
+      tstopA.vhdl	jsr
+			jrt
+			bsr
+			brt
+			sti
+			cli
+			pushf
+			popf
+
+      tstopB.vhdl	lda indirect
+			sta indirect
+
+      tstopC.vhdl	interrupt handling mechanism
+
+      tst1book.vhdl	program from NAVABI's book
+      tst2book.vhdl	program from NAVABI's book
+
+================================================================================

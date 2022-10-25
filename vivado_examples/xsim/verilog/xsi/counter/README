@@ -1,0 +1,35 @@
+To run on linux:
+---------------
+
+Edit set_env.csh and run.csh to point to your installation of vivado and then in a C Shell, do following:
+
+source set_env.csh
+./run.csh
+
+
+
+set_env.csh: CSH script to add appropriate dir to LD_LIBRARY_PATH
+run.csh : CSH script to compile and run the example
+testbench.cpp: An example C test bench
+
+shared_library.h, xsi_loader.h, xsi_loader.cpp: Wrapper C++ classes to load a XSI based shared librray created for a design under test
+
+counter.v counter.prj  : HDL files  and compilation xsim PRJ file comprising an example design under test
+
+
+To run on Windows:
+---------------
+
+1> Set environment varibale PATH to <Vivado Installation Root>\tps\mingw\6.2.0\win64.o\nt\x86_64-w64-mingw32\lib;<Vivado Installation Root>\lib\win64.o
+
+2> set installation path varialble <install_root> in run.bat
+
+3> run 'run.bat'
+
+testbench.cpp: An example C test bench
+
+shared_library.h, xsi_loader.h, xsi_loader.cpp: Wrapper C++ classes to load a XSI based shared librray created for a design under test
+
+counter.v counter.prj  : HDL files  and compilation xsim PRJ file comprising an example design under test
+
+

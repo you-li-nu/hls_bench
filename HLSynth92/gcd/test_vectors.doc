@@ -1,0 +1,49 @@
+
+--------------------------------------------------------------------------------
+--
+--  GCD benchmark
+--
+-- author: Champaka Ramachandran
+--         University Of California, Irvine, CA 92717
+--         champaka@balboa.eng.uci.edu
+--
+-- Written on Sept 11, 92
+--
+--------------------------------------------------------------------------------
+
+
+ OVERALL TESTING STRATEGY 
+
+ The test vectors are designed to detect "stuck-at-0" and "stuck-at-1" 
+ faults at various points in the hardware. All possible paths in this gcd
+ VHDL model are tested. 
+
+
+ The following types of patterns have been tested
+
+ 1. X and Y are small and equal x = 1, y = 1, reset = 0
+ 2. X and Y are small and divisible x = 2, y = 1, reset = 0
+ 3. X and Y are small and divisible 2 times x = 6, y = 3, reset = 0
+ 4. X and Y are small and divisible 4 times x = 12, y = 3, reset = 0
+ 5. X and Y are small and divisible x = 1, y = 2, reset = 0
+ 6. X and Y are small and divisible 2 times x = 3, y = 6, reset = 0
+ 7. X and Y are small and divisible 4 times x = 3, y = 12, reset = 0
+ 8. X and Y are small and divisible 4 times x = 12, y = 6, reset = 1
+ 9. X and Y are not divisible x = 28, y = 5, reset = 0
+ 10. X and Y are not divisible x = 5, y = 28, reset = 0
+ 11. X and Y are not divisible x = 28, y = 5, reset = 1
+ 12. X and Y are equal x = 28, y = 28, reset = 0
+ 13. X and Y are equal x = 28, y = 28, reset = 1
+ 14. Y is large , x = 3, y = 192, reset = 0
+ 15. X is large , x = 192, y = 3, reset = 0
+ 16. X and Y are large, X > Y, and X is not divisible by Y, x = 208, y = 64, reset = 0
+ 17. X and Y are large, X < Y and Y is not divisible by X, x = 38, y = 158, reset = 0
+ 18. X and Y are large, X > Y and X is not divisible by X, x = 158, y = 38, reset = 0
+ 19. X and Y are large, almost equal and are not divisible, x = 158, y = 192, reset = 0
+ 20. X and Y are large, almost equal and are not divisible, x = 158, y = 192, reset = 1
+ 21. X = 0, Y is large, x = 0, y = 192, reset = 0
+ 22. X is large, Y = 0, x = 192, y = 0, reset = 0
+ 23. X = 0, Y = 0, x = 0, y = 0, reset = 0
+ 24. X = 0, Y = 0, x = 0, y = 0, reset = 1
+
+

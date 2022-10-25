@@ -1,0 +1,11 @@
+<AutoPilot:ProjectResources xmlns:AutoPilot="com.autoesl.autopilot.ui.directiveView">
+    <sourceFile name="">
+        <directive functionName="svd_basic" label="off_col" functionLabel="">
+            <pragma name="PIPELINE"/>
+        </directive>
+        <directive functionName="svd_basic" label="off_row" functionLabel="">
+            <pragma name="PIPELINE"/>
+        </directive>
+    </sourceFile>
+</AutoPilot:ProjectResources>
+

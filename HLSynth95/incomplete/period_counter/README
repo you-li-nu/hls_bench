@@ -1,0 +1,18 @@
+README file for Period Counter design example. 
+
+Author: Preeti Ranjan Panda (ppanda@ics.uci.edu)
+Last Modified: 18 Jan 95
+
+This directory contains the files relevant to the Period Counter
+Verilog model.
+
+The contents of this directory are:
+
+Counter.doc	- Document explaining functionality in brief
+
+Counter.v	- Verilog model
+
+README		- This file
+
+
+No test suites were made available.

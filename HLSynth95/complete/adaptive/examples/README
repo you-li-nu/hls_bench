@@ -1,0 +1,10 @@
+Each subdirectory in this directory contains a particular set
+of input and output vectors.
+
+The input signal is in : "Inp.s".
+The length of the burst is in : "Inp.m".
+The positions of the burst are in : "Inp.t".
+
+The result of the simulations are in : "Out.trunc"
+
+In the "readme" file are the interesting in/out patterns.

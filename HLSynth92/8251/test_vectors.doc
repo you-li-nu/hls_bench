@@ -1,0 +1,200 @@
+--------------------------------------------------------------------------------
+--
+--   Intel 8251 Benchmark
+--
+-- Source:  Intel Data Book
+--
+-- VHDL Benchmark author Indraneel Ghosh
+--                       University Of California, Irvine, CA 92717
+--
+-- Developed on April 7, 92
+--
+--------------------------------------------------------------------------------
+
+ OVERALL TESTING STRATEGY 
+
+ In testing the functionality of the 8251, we mainly concentrate on testing
+ its main operational modes :
+
+ (1) Synchronous transmission
+ (2) Asynchronous transmission
+ (3) Synchronous receive (External Synchronization)
+ (4) Synchronous receive (Internal Synchronization)
+ (5) Asynchronous receive
+
+ Functional details peculiar to each mode are tested in each case, among 
+ others.
+
+ We try to test various ports and signals in both their complimentary forms
+ (1 and 0) which is analogous to testing for "stuck-at" faults in synthesised
+ hardware. 
+
+*************************************
+*				    *
+* (1) Synchronous transmission mode *
+*		  		    *
+*************************************
+
+  The strategy is to transmit complementary values of all data bits and parity
+  bit at least once. Parity is tested for even and odd mode. Also test for
+  no parity.
+
+  To test Single-SYNC and Double-SYNC modes, we let the transmission buffer
+  remain empty at some times so that SYNC character(s) are transmitted.
+  In Single-SYNC mode, the transmitter is made to send the same SYNC1 
+  character twice consecutively, to check Single SYNC operation.
+
+  Both SYNC1 and SYNC2 are tested for complementary values of all data bits.
+
+  These tests are performed for all character lengths ( 5, 6, 7, 8 bits).
+
+**************************************
+*	 			     *
+* (2) Asynchronous transmission mode *
+*		  		     *
+**************************************
+
+  The strategy is to transmit complementary values of all data bits and parity
+  bit at least once. Parity is tested for even and odd mode. Also test for
+  no parity.
+
+  Check for start bit, appropriate number of stop bits at all baud rates.
+  Test for all possible baud rates (1X, 16X, 64X)
+  Test for all possible numbers of stop bits (1, 1.5, 2)
+
+  These tests are performed for all character lengths ( 5, 6, 7, 8 bits).
+
+*******************************************************
+*	 			     		      *
+* (3) Synchronous receive (External Synchronization)  *
+*		  		     		      *
+*******************************************************
+
+  First, we check the external synchronization scheme by making the 
+  receiver enter hunt mode and then sending a rising edge on SYNDET_BD.
+
+  The strategy is to receive complementary values of all data bits and parity
+  bit at least once. Parity is tested for even and odd mode. Also test for
+  no parity.
+
+  Also, we test the detection of parity error (for both values of parity in
+  even and odd modes) by sending erroneous parity bits. Also, check for 
+  overrun error by not reading the received data in time.
+
+  These tests are performed for all character lengths ( 5, 6, 7, 8 bits).
+   
+
+*******************************************************
+*	 			     		      *
+* (4) Synchronous receive (Internal Synchronization)  *
+*		  		     		      *
+*******************************************************
+
+  First, we check the internal synchronization scheme by making the 
+  receiver enter hunt mode and then sending sync characters. These tests
+  are performed for both Single-Sync and Double-Sync and for complementary
+  values of SYNC1 and SYNC2.
+
+  The strategy is to receive complementary values of all data bits and parity
+  bit at least once. Parity is tested for even and odd mode. Also test for
+  no parity.
+
+  Also, we test the detection of parity error (for both values of parity in
+  even and odd modes) by sending erroneous parity bits. Also, check for 
+  overrun error by not reading the received data in time.
+
+  These tests are performed for all character lengths ( 5, 6, 7, 8 bits).
+
+*******************************************************
+*	 			     		      *
+* (5) Asynchronous receive 			      *
+*		  		     		      *
+*******************************************************
+
+  In the Asynchronous mode, we test the False Start-Bit Detection Scheme
+  (for baud rate 16X and 64X) by sending false start bits ( send TxD low
+  but make it go high before half the baud cycle). 
+
+  The strategy is to receive complementary values of all data bits and parity
+  bit at least once. Parity is tested for even and odd mode. Also test for
+  no parity.
+
+  Also, we test the detection of parity error (for both values of parity in
+  even and odd modes) by sending erroneous parity bits. Also, check for 
+  overrun error by not reading the received data in time.
+
+  Also check for framing error detection by sending a low signal on RxD when
+  stop bit (high) is expected.
+
+  Test for all possible baud rates (1X, 16X, 64X)
+  Test for all possible numbers of stop bits (1, 1.5, 2)
+
+  These tests are performed for all character lengths ( 5, 6, 7, 8 bits).
+
+
+ Testing Strategy :
+ ----------------
+
+    Each test vector line is equivalent to one clock cycle. 
+
+    Since the 8251 has three clocks, 
+		      (
+			internal device clock -- "clk"
+			transmitter clock     -- "TxC_BAR"
+			receiver clock 	      -- "RxC_BAR"
+		      )
+    it was convenient to put the test vectors in three CONCURRENTLY EXECUTING
+    processes ("main_sim", "Tx_sim", "Rx_sim") each corresponding to one of the
+    respective clocks.  
+                      (
+			process "main_sim" -- "clk"
+			process "Tx_sim"   -- "TxC_BAR"
+			process "Rx_sim"   -- "RxC_BAR"
+		       )
+
+    Each test vector line is translated and included into ONE of these
+    concurrent processes. To signify which concurrent process the the line
+    should be included in, we include one of three characters ("M", "T", "R")
+    at the beginning of each test vector line.
+		(
+		   "M" -- include it in process "main_sim"
+		   "T" -- include it in process "Tx_sim"
+		   "R" -- include it in process "Rx_sim"
+		)
+    
+    The 8251 data-sheets specify that "clk" must be at least 4 times faster 
+    than either "RxC_BAR" or "TxC_BAR". I have assumed that "clk" is 4 times
+    faster than each of them. So, each "TxC_BAR" or "RxC_BAR" cycle is
+    equivalent to 4 "clk" cycles. Therefore, to ensure that time advances
+    equally in all 3 concurrent processes ("main_sim", "Tx_sim" and "Rx_sim"),
+    we always have, in each "OVERALL-CYCLE" :
+
+         (a) 1 line with "T" ( equivalent to 1 "TxC_BAR" cycle)
+         (b) 1 line with "R" ( equivalent to 1 "RxC_BAR" cycle)
+         (c) 4 lines with "M" ( equivalent to 4 "clk" cycles)
+    
+    It is not neccessary to activate any inputs or check any outputs in every
+    test vector line. 
+    Also, if a different clock ratio ("clk" to "RxC_BAR" / "TxC_BAR") is
+    desired, that can be achieved by simply changing the ratio of "T", "R"
+    and "M" lines in each "OVERALL-CYCLE".
+
+    Values corresponding to ports are written in the exact order in which
+    port names are mentioned in the Port Name Line ( Type [a], Line {I} ).
+    In case we dont want to mention any value for a particular port in that
+    line, we put in one or more dashes ( - ) in that position corresponding 
+    to that port. Values are separated by the colon as a port-separator.
+
+    Values in the input-port positions in Type [b] lines are assigned to the
+    corresponding input port. Only the "clocking" is implicit in the
+    translation process for each test vector and the clocks ("clk", 
+    "RxC_BAR" and "TxC_BAR" ) are not specifically mentioned among the input
+     ports. 
+
+    Values in the output-port positions in Type [b] lines are compared to the
+    actual output values appearing at the corresponding output ports when we
+    run the simulation. If these two values dont match, then an "Assert" 
+    statement is generated to show that an error has been detected.
+
+--------------------------------------------------------------------------
+

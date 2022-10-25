@@ -1,0 +1,52 @@
+<AutoPilot:ProjectResources xmlns:AutoPilot="com.autoesl.autopilot.ui.directiveView">
+    <sourceFile name="">
+        <directive functionName="qrf_alt" label="col_assign_q_i" functionLabel="">
+            <pragma name="PIPELINE"/>
+        </directive>
+        <directive functionName="qrf_alt" label="col_assign_r_i" functionLabel="">
+            <pragma name="PIPELINE"/>
+        </directive>
+        <directive functionName="qrf_alt" label="calc_rotations" functionLabel="">
+            <pragma name="PIPELINE"/>
+        </directive>
+        <directive functionName="qrf_alt" label="update_r" functionLabel="">
+            <pragma name="PIPELINE"/>
+        </directive>
+        <directive functionName="qrf_alt" label="update_q" functionLabel="">
+            <pragma name="PIPELINE"/>
+        </directive>
+        <directive functionName="qrf_alt" label="assign_r_col_loop" functionLabel="">
+            <pragma name="PIPELINE"/>
+        </directive>
+        <directive functionName="qrf_alt" label="assign_q_col_loop" functionLabel="">
+            <pragma name="PIPELINE"/>
+        </directive>
+        <directive functionName="qrf_alt" label="" functionLabel="">
+            <pragma name="ARRAY_PARTITION">
+                <option name="variable" value="q_i" positionalBoolean="4"/>
+                <option name="cyclic" value="" positionalBoolean="type"/>
+                <option name="factor" value="2"/>
+                <option name="dim" value="2"/>
+            </pragma>
+        </directive>
+        <directive functionName="qrf_alt" label="" functionLabel="">
+            <pragma name="ARRAY_PARTITION">
+                <option name="variable" value="r_i" positionalBoolean="4"/>
+                <option name="cyclic" value="" positionalBoolean="type"/>
+                <option name="factor" value="2"/>
+                <option name="dim" value="2"/>
+            </pragma>
+        </directive>
+        <directive functionName="qrf_alt" label="update_r" functionLabel="">
+            <pragma name="UNROLL">
+                <option name="factor" value="2"/>
+            </pragma>
+        </directive>
+        <directive functionName="qrf_alt" label="update_q" functionLabel="">
+            <pragma name="UNROLL">
+                <option name="factor" value="2"/>
+            </pragma>
+        </directive>
+    </sourceFile>
+</AutoPilot:ProjectResources>
+

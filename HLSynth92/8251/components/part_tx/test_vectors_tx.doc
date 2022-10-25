@@ -1,0 +1,169 @@
+--------------------------------------------------------------------------------
+--
+--   Intel 8251 Benchmark -- Receiver
+--
+-- Source:  Intel Data Book
+--
+-- VHDL Benchmark author Indraneel Ghosh
+--                       University Of California, Irvine, CA 92717
+--
+-- Developed on April 7, 92
+--------------------------------------------------------------------------------
+
+TESTING THE 8251 MODEL
+
+ OVERALL TESTING STRATEGY 
+
+ In testing the functionality of the "transmitter" process, we mainly 
+ concentrate on testing its main operational modes :
+
+ (1) Synchronous transmission
+ (2) Asynchronous transmission
+
+ Functional details peculiar to each mode are tested in each case, among 
+ others.
+
+ We try to test various ports and signals in both their complimentary forms
+ (1 and 0) which is analogous to testing for "stuck-at" faults in synthesised
+ hardware. 
+
+*************************************
+*				    *
+* (1) Synchronous transmission mode *
+*		  		    *
+*************************************
+
+  The strategy is to transmit complementary values of all data bits and parity
+  bit at least once. Parity is tested for even and odd mode. Also test for
+  no parity.
+
+  To test Single-SYNC and Double-SYNC modes, we let the transmission buffer
+  remain empty at some times so that SYNC character(s) are transmitted.
+  In Single-SYNC mode, the transmitter is made to send the same SYNC1 
+  character twice consecutively, to check Single SYNC operation.
+
+  Both SYNC1 and SYNC2 are tested for complementary values of all data bits.
+
+  These tests are performed for all character lengths ( 5, 6, 7, 8 bits).
+
+**************************************
+*	 			     *
+* (2) Asynchronous transmission mode *
+*		  		     *
+**************************************
+
+  The strategy is to transmit complementary values of all data bits and parity
+  bit at least once. Parity is tested for even and odd mode. Also test for
+  no parity.
+
+  Check for start bit, appropriate number of stop bits at all baud rates.
+  Test for all possible baud rates (1X, 16X, 64X)
+  Test for all possible numbers of stop bits (1, 1.5, 2)
+
+  These tests are performed for all character lengths ( 5, 6, 7, 8 bits).
+
+ --------------------------------------------------------------------------
+
+ FORMAT OF TEST-VECTORS IN "*.bits" FILE ( "bit_format" )
+
+ In this file, the test vectors for the "transmitter" process of the 8251
+ USART are stored in a format known as the"bit_format". These test vectors
+ can be very easily converted to other HDL formats. I have a C program that
+ converts them into VHDL format.
+
+ The "bit_format" has the following characteristics :
+
+ 1) This file is line-oriented and there are three types of lines :-
+     
+      [a] Port Description Lines
+      [b] Actual Test Vector Lines
+      [c] Comment Lines.
+
+ 2) All comment lines (Type [c]) begin with a star (*). While translating
+    these test vectors into some HDL format (e.g. VHDL), the initial comment 
+    lines are ignored. All other comment lines are copied verbatim into the 
+    HDL file.
+
+ 3) In lines of Types [a] and [b], the line has many fields corresponding to
+    ports of the entity being tested. A colon (:) acts as a field-separator 
+    between ports ( We will call it a port separator). Each such line must 
+    end with a colon.
+
+ 4) There are three Port Description Lines ( Type [a] ). These lines come
+    just after the initial comment lines ( of Type [c] ). The three lines
+    (in the following order) are :-
+
+      {I} Port Name Line : This line specifies the names of all ports of the
+                           entity being tested. Port names are separated by a
+                           colon. 
+                           
+                           The order in which the port names are specified is 
+                           significant. In all other lines of Type [a] and [b],
+			   information pertaining to specific ports must appear
+			   in the same order with a colon as a port-separator.
+
+			   All input ports are mentioned first, followed by
+                           the output ports. Inout ports are mentioned both
+                           as input as well as output ports.
+	   
+      {II} Port Direction Line : This line specifies the directions ( in, out,
+       				 inout ) of the ports mentioned in the Port
+           			 Name Line ( Line {I} ).
+                           
+      {III} Port Type Line : This line is related to the data type ( e.g. 
+			     bit, bit-vector, integer etc.) of the ports 
+                             mentioned in the Port Name Line ( Line {I} ).
+			     This line is very specific to VHDL data type
+			     declaration syntax and may not be relevant to
+			     other HDL's. 
+
+ 5) The Actual Test Vector Lines (Type [b] ) contain the test vectors for the
+    8251. 
+
+    Each test vector line is equivalent to one clock cycle. 
+
+    Values corresponding to ports are written in the exact order in which
+    port names are mentioned in the Port Name Line ( Type [a], Line {I} ).
+    In case we dont want to mention any value for a particular port in that
+    line, we put in one or more dashes ( - ) in that position corresponding 
+    to that port. Values are separated by the colon as a port-separator.
+
+    Values in the input-port positions in Type [b] lines are assigned to the
+    corresponding input port. Only the "clocking" is implicit in the
+    translation process for each test vector and the clock ( "TxC_BAR")
+    is not specifically mentioned among the input ports. 
+
+    Values in the output-port positions in Type [b] lines are compared to the
+    actual output values appearing at the corresponding output ports when we
+    run the simulation. If these two values dont match, then an "Assert" 
+    statement is generated to show that an error has been detected.
+
+--------------------------------------------------------------------------
+
+HOW TO ADD MORE TEST VECTORS
+
+    More test vectors can be easily added simply by entering more lines in
+    "bit_format" to the end of the file. These lines must be "Actual Test 
+    Vector Lines ( Type [b] )". 
+
+    "Comment Lines ( Type [c] )" may also be added, but those will not have
+    any effect on simulation.
+
+--------------------------------------------------------------------------
+
+TRANSLATION FROM "bit_format" TO VHDL.
+
+ In this directory, I have a C program called "trans_tx.c" that does this 
+ translation.
+
+ The following steps can be followed :-
+
+  (i) Compile the translator file.
+          "cc trans_tx.c -o trans_tx"
+
+  (ii) Run the translation program by specifying an input and an output file.
+          "trans_tx sytx.bits sytx.vhdl"
+       This program accepts test vectors in "bit_format" from an input file
+       (for example) "sytx.bits" and produces test vectors in VHDL format in
+       output file "sytx.vhdl"
+

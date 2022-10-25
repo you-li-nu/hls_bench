@@ -1,0 +1,65 @@
+---------------------------------------------------------------------------
+
+  Floating Point Multiplier: README FILE
+
+  Developed on Mar 23, 1994 by :
+                                Jesse Pan,
+                                Univ. of Calif. , Irvine, CA 92717
+				jpan@ece.uci.edu
+
+--------------------------------------------------------------------------
+
+THIS DIRECTORY HAS THE FOLLOWING FILES :
+
+FP_mult.doc         :  This file contains a brief description of the Floating
+                       Point Multiplier.
+
+FP_mult.vhd         :  This is the main control file of the Floating Point
+                       Multiplier that models its behavior.
+
+m_b2vhdl            :  This is the executable file produced upon compiling
+                       mtrans.c. It translates "bit_format" vectors into VHDL. 
+
+test.doc            :  This file contains a brief description of the testing
+                       strategy used in simulating the Floating Point 
+		       Multiplier. 
+
+test.vhd            :  This file contains the VHDL (translated) test vectors
+                       for the Floating Point Multiplier model.  
+		       In order to simulate it on the Synopsys (Version 3.0a-
+	               10052) simulator, the model(FP_mult.vhd) is instantiated 
+                       in this file as a component. The test vectors are 
+                       sequence of statements, in a process block, assert 
+                       test vectors to the floating point multiplier unit.
+
+mtrans.c            :  This is a C program that will translate test vectors
+                       from "bit_format" to VHDL.
+
+tvector.bits        :  This file contains "bit_format" test vectors for the
+                       Floating Point Multiplier model.
+
+-------------------------------------------------------------------------
+******************************************************************************
+
+ RUNNING THE TEST VECTORS ON THE MODELS USING THE SYNOPSYS SIMULATOR:
+ Synopsys Version 3.0a
+
+******************************************************************************
+
+ **** Running test_vectors on the Floating Point Multiplier ****
+
+  To simulate the Floating Point Multiplier model:
+
+    (i) Compile the FP_mult.vhd file by typing
+          "vhdlan FP_mult.vhd"
+
+    (ii) If the tvector.bits file is not up to date, type
+           "m_b2vhdl tvector.bits test.vhd", where test.vhd will be the
+            translated VHDL file 
+
+    (iii) Compile the test.vhd file by typing
+            "vhdlan test.vhd"
+
+    (iv) Simulate the process using Synopsys debugger typing
+           "vhdldbx ATEST__TEST1"
+

@@ -1,0 +1,27 @@
+README file for memory synthesis examples in this directory. 
+
+Author: Preeti Ranjan Panda (ppanda@ics.uci.edu)
+
+Description
+-----------
+The design examples included in this directory are all C-programs
+that have interesting memory access patterns - which makes them
+useful test cases for memory synthesis algorithms.
+
+The contents of this directory are:
+
+Compress.c	- Image compression
+
+GSR.c           - Gauss-Seidel Relaxation
+
+Laplace.c       - Laplace edge enhancement algorithm
+
+Linear.c        - Linear recurrence solver
+
+LowPass.c	- Low pass filter
+
+README		- This file
+
+SOR.c		- Successive Over-Relaxation
+
+Wavelet.c	- Debaucles 4-Coefficient Wavelet filter

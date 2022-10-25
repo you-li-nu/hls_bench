@@ -1,0 +1,61 @@
+
+
+		FANCY Benchmark for High-Level Synthesis
+		========================================
+
+               Michael Pilsl, Siemens AG, Munich, Germany
+                       (pilsl@sabine.zfe.siemens.de)
+           Subhrajit Bhattacharya, Duke University, Durham, NC
+                       (sb@cs.duke.edu, sb@mcnc.org)
+             Franc Brglez, MCNC, Research Triangle Park, NC
+                            (brglez@mcnc.org)
+
+This directory contains the design files for the FANCY chip.
+The FANCY benchmark was created to illustrate the RTL optimization
+process published in the paper .....
+"RT-Level Transformations for Gate Level Testability, Subhrajit
+Bhattacharya, Sujit Dey and Franc Brglez, EDAC-EUROASIC, Paris, 1993."
+
+
+A description of the files in this directory follows.
+
+- "fancy.vhdl"
+        contains the vhdl description of the function of the
+        chip.
+
+- "fancy_stim.vhdl"
+        contains the vhdl description needed for (partial)
+        simulation of the design.
+
+- "waves.ps"
+        contains the waveforms resulting from simulating the
+        scheduled vhdl description. When the signal consists
+        of a more than one bit, then the value (decimal) is indicated
+        between parallel lines whenever possible. The file is
+        in postscript.
+
+- "fancy.io"
+        this file is a more english like description of
+        the inputs and the way the outputs change with
+        the inputs. A ".I" indicates an input and a ".O"
+        indicates an output. It should be noted that in
+        several places one has been asked "to iterate
+        till ..." . Given the VHDL description without
+        any IO constraints, one will come up with schedules
+        which needs different number of clock ticks (time
+        steps) to do the same sequence of operations. We have
+        tried to impose the minimum amount of constraint by
+        asking "to iterate till ...". We suggest one go
+        through their implementation of the schedule till
+        the outputs reach the values specified. If the
+        specified values are not reached, there is a bug
+        somewhere.
+
+Additional information about this benchmark and a new data point at
+register-, gate- and transistor-level for this design can be obtained from
+
+Subhrajit Bhattacharya, Franc Brglez and Michael Pilsl,
+"Synthesis for Testability from Behavioral Specifications:
+Benchmarking  the Scheduling Strategies",
+MCNC Technical Report, June 1993.
+

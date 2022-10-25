@@ -1,0 +1,184 @@
+-------------------------------------------------------------------------------
+--
+-- Floating Point Adder/Subtractor Benchmark: Main File Documentation
+--
+-- Source:  Patterson, David A., and Hennessy, John L.,  "Computer 
+--	         architecture: a quantitative approach".  San Mateo, CA: Morgank
+--		 Kaufman Publishers, 1990,  Appendix A, p. 12-20
+--  
+-- Author: Bob McIlhenny 
+--	   University of California, Irvine, CA 92717
+-- 
+--	   based on an original design by:
+--	   Marc Rose, Intel Corporation
+--         
+-- Written on June 9, 1993
+--
+-- Modified by Jesse Pan on Nov 18, 1993
+--
+-------------------------------------------------------------------------------
+
+1) INTRODUCTION:
+
+  The Floating Point Adder/Subtractor is a design algorithm that performs an
+operation, given the operator and two IEEE standard source operands, and
+produces an IEEE standard result.
+
+Both the two inputs and the output are represented by a sign bit, a 127-biased
+integer exponent in the range 0..255, and a 23-bit vector mantissa with a 
+"hidden 1"(e.g. implicit representation in Patterson and Hennessy, "Computer 
+Architecture: a Quantitative Approach").  This is the IEEE standard, and its 
+representation is shown below:
+
+          ______________________________
+          | sign | exponent | mantissa |
+          |______|__________|__________|
+            1 bit   8 bits     23 bits 
+   
+------------------------------------------------------------------------------ 
+
+(1.1)  FUNCTIONAL BLOCK(S)
+
+The Adder/Subtractor has one main functional block, shown below:
+
+** The Main functional block consists of one process: the Main process.
+
+	## Main process describes the input and output fields, including the
+	   respective signs, exponents, and mantissas. 
+
+                      OPERAND 1   OPERAND 2
+                          |           |
+                    ______v___________v______
+                    |                       |
+      OPERATION --->|     FLOATING POINT    |
+                    |    ADDER/SUBTRACTOR   |                    
+          CLOCK --->|_______________________|
+                           |         |
+                           v         v
+                         RESULT    FLAGS
+
+------------------------------------------------------------------------------ 
+
+(1.2)  PORTS
+
+INPUT AND OUTPUT PORTS:
+
+______________________________________________________________________________
+|   PORTS   | TYPE | BIT   | DESCRIPTION				      |
+|           |      | WIDTH |						      |
+|-----------|------|-------|--------------------------------------------------|
+|    clk    |  in  |   1   | internal timing				      |
+|-----------|------|-------|--------------------------------------------------|
+| op1_sign  |  in  |   1   | bit sign of 1st operand			      |
+|-----------|------|-------|--------------------------------------------------|
+|  op1_exp  |  in  |   8   | integer exponent of 1st operand, in range 0..255 |
+|-----------|------|-------|--------------------------------------------------|
+| op1_mant  |  in  |  23   | 23-bit vector mantissa of 1st operand	      |
+|-----------|------|-------|--------------------------------------------------|
+| op2_sign  |  in  |   1   | bit sign of 2nd operand			      |
+|-----------|------|-------|--------------------------------------------------|
+|  op2_exp  |  in  |   8   | integer exponent of 2nd operand, in range 0..255 |
+|-----------|------|-------|--------------------------------------------------|
+| op2_mant  |  in  |  23   | 23-bit vector mantissa of 2nd operand	      |
+|-----------|------|-------|--------------------------------------------------|
+| res_sign  |  out |   1   | bit sign of result				      |
+|-----------|------|-------|--------------------------------------------------|
+|  res_exp  |  out |   8   | integer exponent of result, in range 0.255       |
+|-----------|------|-------|--------------------------------------------------|
+| res_mant  |  out |  23   | 23-bit vector mantissa of result		      |
+|-----------|------|-------|--------------------------------------------------|
+| operation |  in  |  ---  | signal that indicates operation, with possible   |
+|           |      |       | values: add, subtract, idle                      |
+|-----------|------|-------|--------------------------------------------------|
+|   flags   |  out |   4   | 4-bit vector that sets status bit flags          |
+|___________|______|_______|__________________________________________________|
+
+-------------------------------------------------------------------------------
+
+(1.3)  THE INSTRUCTION SET:
+
+The Floating Point Adder has three instructions as follows:
+
+** add, subtract, idle:  control performing operation and producing result
+			 values based on input operands
+
+-------------------------------------------------------------------------------
+
+(1.3.1)  FUNCTIONS:
+
+_______________________________________________________________________________
+|  OPERATION  |  EFFECT UPON RESULT 				              |
+|             |								      |
+|-------------|---------------------------------------------------------------|
+|     add     | sets result's sign, exponent, and mantissa after "adding"     |
+|	      |	1st operand's addend to 2nd operand's addend		      |
+|-------------|---------------------------------------------------------------|
+|  subtract   | sets result's sign, exponent, and mantissa after "subtracting"|
+|	      | 1st operand's addend to 2nd operand's addend	              |
+|-------------|---------------------------------------------------------------|
+|    idle     | maintains previous result's sign, exponent, and mantissa      |
+|_____________|_______________________________________________________________|
+
+NOTE: An addend is a 27-bit vector consisting of a "overflow" bit, the
+      23-bit vector mantissa, and 3 bits of precision (guard, round, and sticky
+      bits). 
+
+===============================================================================
+
+2)  MODEL DEVELOPED FOR THE Floating Point Adder/Subtractor
+
+main process -> The Adder/Subtractor is modeled as a single VHDL process
+
+===============================================================================
+
+3)  TESTING STRATEGY
+
+The functions above were tested with the set of test vectors in the file:
+"test.vhd" 
+
+The test vectors were chosen to exhaustively test both nominal and boundary
+values of the sign, exponent, and mantissa of both source operands
+
+Note:  The exponents used are biased-127, in other words the actual exponent
+       is 127 less than its representation
+       Also, the mantissa is represented in "hidden 1" representation
+
+Nominal Operand:  Sign = 0 or 1,  Exponent = 1 to 254
+                  Mantissa = any 23-bit combination of 0's and 1's, with the
+		             exception of all 0's
+		  The rounding conditions are tested, the rounding mode is based
+		  on IEEE 754 floating-point standard default mode(round/even).
+
+Boundary Operands:
+	            Zero:  Sign = 0 or 1,  Exponent = 0,  
+	                   Mantissa = 23-bit vector consisting of all 0's
+        Minimum Positive:  Sign = 0,  Exponent = 0
+	                   Mantissa = 23 bit-vector: 00000..01   
+        Minimum Negative:  Sign = 1,  Exponent = 0
+	                   Mantissa = 23 bit-vector: 00000..01
+	Maximum Positive:  Sign = 0,  Exponent = 254
+			   Mantissa = 23-bit vector consisting of all 1's
+	Maximum Negative:  Sign = 1,  Exponent = 254
+			   Mantissa = 23-bit vector consisting of all 1's
+        Positive Infinity: Sign = 0,  Exponent = 255
+			   Mantissa = 23-bit vector consisting of all 0's
+        Negative Infinity: Sign = 1,  Exponent = 255
+			   Mantissa = 23-bit vector consisting of all 0's
+	Not a Number(NaN): Sign = 0 or 1,  Exponent = 255
+			   Mantissa = 23-bit vector consisting of any
+			       23-bit combination of 0's and 1's, with the
+			       exception of all 0's 
+
+Each of the three functions was thoroughly tested for correctness and
+precision.
+
+===============================================================================
+
+4)  STATUS OF MODELS
+ ________________________________________________________________
+|         |                  |              |        |           |
+| MODEL   | TEST VECTOR USED |   SIMULATOR  | ERRORS | SYNTHESIS |
+|_________|__________________|______________|________|___________|
+|  main   |    		     |	   	    |  	     |	         |
+| process |    test.vhd      | Synopsys 3.0 |  None  |   ----    |
+|_________|__________________|______________|________|___________|

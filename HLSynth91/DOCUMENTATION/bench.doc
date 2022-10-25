@@ -1,0 +1,49 @@
+
+BENCHMARK DOCUMENTATION, as of July 30, 1990
+
+    Below is a list of the benchmarks for the 1991 High-Level Synthesis 
+    Workshop.  Robert Mayo is still maintaining the clearinghouse system,
+    but due to time constraints is not participating in the selection of
+    the benchmarks.
+
+    The current benchmarks come from two sources.  The first set is from the 
+    1989 workshop.  The second set comes from Giovanni De Micheli at Stanford.
+
+    The 1989 workshop benchmarks are:
+
+	Processors:
+	    mc6502 (ISP description)
+	    mc68000 (ISP description)
+
+	Peripheral/glue chips:
+	    i8251 (ISP description, Hardware C description)
+	    Amiga BLIT chip (C description)
+
+	DSP chips:
+	    fft (paper description only)
+	    pitch extraction (paper description only)
+	    kalman filter (ISP description)
+
+	Small examples:
+	    Traffic light controller (V & VHDL descriptions)
+	    GCD (V & VHDL descriptions)
+	    Counter (V & VHDL descriptions)
+	    Prefetch (V & VHDL descriptions)
+
+    The Stanford benchmark set includes:
+
+	daio_receiver		DAIO Receiver
+	daio_phase_decoder	DAIO Phase Decoder
+	diffeq			Differential Equation Solver
+	ecc			Error Correction System
+	elliptic		Fifth Order Elliptic Filter
+	frisc			RISC Microprocessor
+	gcd			Greatest Common Divisor Alg.
+	parker1986		Example from Alice Parker 1986
+	traffic			Traffic Light Controller
+	tseng			Example from Tseng
+
+    Retrieve the file readme.stanford for more details on the Stanford
+    collection.
+
+

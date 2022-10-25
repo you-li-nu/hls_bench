@@ -1,0 +1,24 @@
+
+Pitch extractor for speech coding -- as of 6/27/88
+
+Algorithm: 
+    Described in R.J.Sluyter, H.J.Kotmans, A.v.Leeuwaarden,
+    "A novel method for pitch extraction from speech and a hardware model
+    applicable to vocoder systems", Proc. IEEE ICASSP (Int'l Conference on
+    Acoustics, Speech and Signal Processing), Denver CO, 1980.  We propose 
+    to leave out the preceeding FFT.  Only the pitch extraction itself should 
+    be designed.
+
+Word-lengths: 
+    As described in the paper.
+
+Sample rate: 
+    8 KHz (as in the paper).  Also a second design working for high-
+    quality speech at 32 KHz (which is hypothetical of course) could be entered 
+    too in order to evaluate how flexible the synthesis systems respond 
+    to sample rate changes.
+
+For further information contact:
+    Francky Catthoor
+    mcvax!imec!catthoor@uunet.uu.net
+

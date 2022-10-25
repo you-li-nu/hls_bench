@@ -1,0 +1,24 @@
+
+FFT Benchmark - as of 6/17/88
+
+Algorithm: 
+    Conventional decimation in time, radix 2 which can be found in any text 
+    book on DSP.  For example, see "Theory and application of Digital Signal
+    Processing" by Rabiner & Gold, Prentice-Hall, 1975, pp.356-382.  If your
+    library does not have this book a paper copy of these pages is available
+    from Robert Mayo, mayo@cs.wisc.edu.
+
+Size: 
+    2048 point
+
+Word-lengths: 
+    16 bit for data and coefficients, internal precision = 20 bit
+
+Sample rate: 
+    44 KHz (CD rate)
+
+For further information contact:
+    Francky Catthoor,
+    mcvax!imec!catthoor@uunet.uu.net
+
+

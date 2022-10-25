@@ -1,0 +1,15 @@
+<AutoPilot:ProjectResources xmlns:AutoPilot="com.autoesl.autopilot.ui.directiveView">
+    <sourceFile name="">
+        <directive functionName="qr_inverse_small" label="" functionLabel="">
+            <pragma name="TOP">
+                <option name="name" value="DESIGN_TOP"/>
+            </pragma>
+        </directive>
+        <directive functionName="qr_inverse_small" label="" functionLabel="">
+            <pragma name="INLINE">
+                <option name="recursive" value="" positionalBoolean="1"/>
+            </pragma>
+        </directive>
+    </sourceFile>
+</AutoPilot:ProjectResources>
+

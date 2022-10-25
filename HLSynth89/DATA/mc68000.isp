@@ -1,0 +1,2428 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! HISTORY
+! 31-May-84  Jayanth Rajan (jayanth) at Carnegie-Mellon University
+!	Corrected syntax errors to satisfy the VAX ISPS compiler.  The
+!	following corrections were made:
+!		1. commas at the end of section lists were removed
+!		2. commas after the last numbered action in a DECODE were
+!		   eliminated
+!		3. all text of the form "| ... |" after BEGIN and END
+!		   statements were changed to comments of the form
+!		   "! | ... |"
+!	The original ISPS description can be found in
+!	~jayanth/isp/mn68k.isp.
+
+!	Rewrote the statements in DIVS and DIVU which test for overflow
+!	without the predeclared entities COUNT.ONE and FIRST.ONE because
+!	the VT translator does not understand them.
+
+!	Wrote a COUNT.ONE entity for use within AS(Arithmetic.Shift).
+!	This is another hack written for the same reason mentioned
+!	previously.
+
+!	Changed all mappings on left hand side expressions which use the
+!	concatenation operator to the target carriers because the VT
+!	compiler can translate only simple carriers.
+
+!	Removed the map definition of word memory because the VT
+!	compiler does not understand the INCREMENT qualifier.  Replaced
+!	word reads by sequential byte reads.  Architecturally, this is
+!	incorrect.
+!
+!	Corrected the DBcc instruction so that only low order 16 bits of
+!	the data register are decremented and tested.  This may still not
+!	be correct.
+!
+!	Changed don't cares in DECODE selectors to name pairs or name pair 
+!	lists because the VT translator complains that constants with 
+!	don't cares are negative numbers.
+!
+!*****************************************************************************
+! ISP for the Motorola 68000 16-bit microprocessor
+!
+! By: Michael Norton@Carnegie-Mellon University
+!
+! Date: 3/7/82
+!
+! Reference: MC68000 16-Bit Microprocessor User's Manual.
+!
+! This ISP represents a desription of the instruction set only.
+! Exception processing is not handled.
+
+MC68000 :=
+	BEGIN		! | isp |
+
+** Macro.Definitions **
+
+MACRO TRUE		:= |1|,
+MACRO FALSE		:= |0|,
+
+MACRO PmemSize		:= |"00FFFF|,		! the physical memory size.
+
+MACRO DataRegDir	:= |'000|,		! Some of the addressing modes
+MACRO AddrRegDir	:= |'001|,
+MACRO PostInc		:= |'011|,
+MACRO PreDec		:= |'100|,
+MACRO IndirPlusDisp	:= |'101|,
+MACRO IndirPlusIndex	:= |'110|,
+MACRO SpecialModes	:= |'111|,
+MACRO PCplusIndex	:= |'011|,
+
+MACRO SPnum		:= |#7|,		! the number of the stack pointer.
+
+MACRO ByteSize		:= |'00|,
+MACRO WordSize		:= |'01|,
+MACRO LongSize		:= |'10|,
+
+MACRO Right		:= |'0|,		! the direction indicated in a shift.
+MACRO Left		:= |'1|
+** processor.state **
+
+! the register set
+
+Dreg\Data.register[7:0]<31:0>
+	{sugar: 
+		{array: {
+			role: architectural ;
+			location: on.chip;
+			data.ports:2;
+			max.read.accesses.per.cycle:2;
+			max.write.accesses.per.cycle:1}}},
+Areg\Address.register[6:0]<31:0>
+	{sugar: 
+		{array: {
+			role: architectural ;
+			location: on.chip;
+			data.ports:2;
+			max.read.accesses.per.cycle:2;
+			max.write.accesses.per.cycle:1}}},
+! the seventh register is...
+USP\User.Stack.Pointer<31:0>	! either the user or the supervisor stack pointer.
+	{sugar:
+		{register: {
+			role: architectural;
+			register.function: stack.pointer}}},
+SSP\Supervisor.Stack.Pointer<31:0>
+	{sugar:
+		{register: {
+			role: architectural;
+			register.function: stack.pointer}}},
+
+! the address register access routines
+
+areg.read(regno<2:0>)<31:0> :=
+	BEGIN
+	DECODE regno =>
+		BEGIN
+		SPnum := DECODE Smode =>
+		   BEGIN
+		   0 := areg.read = USP,
+		   1 := areg.read = SSP
+		   END,
+		otherwise := areg.read = Areg[regno]
+		END
+	END,
+
+areg.write(regno<2:0>)<31:0> :=
+	BEGIN
+	DECODE regno =>
+		BEGIN
+		SPnum := DECODE Smode =>
+		  BEGIN
+		  0 := USP = areg.write,
+		  1 := SSP = areg.write
+		  END,
+		otherwise := Areg[regno] = areg.write
+		END
+	END,
+
+
+! internal registers
+
+PC\Program.Counter<31:0> ! only 24 bits of this are used
+	{sugar:
+		{register: {
+			role: architectural;
+			register.function: program.pointer}}},
+SR\Status.Register<15:0>
+	{sugar:
+		{register: {
+			role: architectural;
+			register.function: condition.codes}}},
+	Sysbyte<7:0> := SR<15:8>,
+		Tmode\Trace.Mode<>		:= Sysbyte<7>,
+		Smode\Supervisor.Mode<>		:= Sysbyte<5>,
+		Imask\Interrupt.Mask<2:0>	:= Sysbyte<2:0>,
+	Userbyte\Cond.Code.Reg<7:0>		:= SR<7:0>,
+		X\Extend<>		:= Userbyte<4>,
+		N\Negative<>		:= Userbyte<3>,
+		Z\Zero<>		:= Userbyte<2>,
+		V\Overflow<>		:= Userbyte<1>,
+		C\Carry<>		:= Userbyte<0>,
+
+Prefetch<>		! prefetch off or on. used by jmp & jsr.
+	{sugar:
+		{register: {
+			role: implementation;
+			register.function: miscellaneous}}},
+
+Illegal.Instruction<> ! Illegal Instruction exception flag.
+	{sugar:
+		{register: {
+			role: implementation;
+			register.function: miscellaneous}}},
+Privilege.Violation<> ! Privilege Violation exception flag.
+	{sugar:
+		{register: {
+			role: implementation;
+			register.function: miscellaneous}}},
+
+! temporary and dummy registers.
+
+temp64<63:0>,
+temp32<31:0>,
+temp16<15:0>,
+temp8<7:0>,
+NZVC<3:0>,	! temporary register for the condition codes out of the ALU.
+	Ntemp<> := NZVC<3>,
+	Ztemp<> := NZVC<2>,
+	Vtemp<> := NZVC<1>,
+	Ctemp<> := NZVC<0>,
+
+! format of Indirbuf used in addressing modes ARII & PCI.
+Indirbuf<15:0>,
+	D.A\Data.or.Address.register<>	:= Indirbuf<15>,
+	R\register<2:0>			:= Indirbuf<14:12>,
+	W.L\Word.or.Long<>		:= Indirbuf<11>,
+	DI\Displacement.Integer<7:0>	:= Indirbuf<7:0>,
+
+NIR\Next.Instruction.Register<15:0>, ! Model Prefetch.
+IR\Instruction.Register<15:0>
+	{sugar:
+		{register: {
+			role: implementation;
+			register.function: instruction.register}}},
+
+! The fields of the various formats in numerical order.
+
+	Op.Set<3:0>	  := IR<15:12>,	! common to all instructions. 
+
+	Op.Field.1<2:0>	  := IR<11:9>,
+	Data<2:0>	  := IR<11:9>,
+	C.R<2:0>	  := IR<11:9>,
+	Cond<3:0>	  := IR<11:8>,
+	Eadd.b<5:0>	  := IR<11:6>,	! The destination effective address.
+		reg.b<2:0>  := Eadd.b<5:3>,
+		mode.b<2:0> := Eadd.b<2:0>,
+
+	Op.Field.2a<>	  := IR<8>,
+	Dir<>		  := IR<8>,	! the direction to go in.
+	Op.Field.2ab<1:0> := IR<8:7>,
+	Op.Field.2<2:0>	  := IR<8:6>,
+	Op.Mode<2:0>	  := IR<8:6>,
+
+	Op.Field.2bc<1:0> := IR<7:6>,
+	Mode<1:0>	  := IR<7:6>,
+	Size<1:0>	  := IR<7:6>,
+	Value<7:0>	  := IR<7:0>,
+
+	Sz<>		  := IR<6>,	! another kind of size field.
+
+	I.R<>		  := IR<5>,
+	Op.Field.3ab<1:0> := IR<5:4>,
+	Op.Field.3<2:0>	  := IR<5:3>,
+	Eadd.a<5:0>	  := IR<5:0>,	! The source effective address.
+		mode.a<2:0> := Eadd.a<5:3>,
+		reg.a<2:0>  := Eadd.a<2:0>,
+
+	Op.Field.3bc<1:0> := IR<4:3>,
+
+	R.M<>		  := IR<3>,
+	Vector<3:0>	  := IR<3:0>,	! trap vector number
+
+	Op.Field.4<2:0>	  := IR<2:0>
+!********** The Instruction Formats ****************************************
+!
+!---------- Format 1 -------------------------------------------------------
+!
+!     This format is used in the Dynamic Bit manipulation instructions,
+!	(BTST, BCHG, BCLR & BSET) and the CHK, LEA, DIVU, DIVS, MULU, MULS
+!	instructions.
+!
+!		regb<2:0>	:= IR<11:9>,
+!		Eadd.a<5:0>	:= IR<5:0>,
+!
+!---------- Format 2 -------------------------------------------------------
+!
+!     This format is used by the Static Bit manipulation instructions,
+!	(see format 1), and the MOVE.from.SR, MOVE.to.CCR, MOVE.to.SR,
+!	NBCD, PEA, TAS, JSR and the JMP instructions.
+!
+!		Eadd.a<5:0>	:= IR<5:0>,
+!
+!---------- Format 3 ------------------------------------------------------
+!
+!     This format is used by the MOVEP instruction.
+!
+!		reg.b<2:0>	:= IR<11:9>,
+!		Mode<1:0>	:= IR<7:6>,
+!		reg.a<2:0>	:= IR<2:0>,
+!
+!---------- Format 4 ------------------------------------------------------
+!
+!     This format is used in the ORI, ANDI, SUBI, ADDI, EORI, CMPI, NEGX,
+!	CLR, NEG, NOT. & TST. instructions.
+!
+!		Size<1:0>	:= IR<7:6>,
+!		eadd.a<5:0>	:= IR<5:0>,
+!
+!---------- Format 5 --------------------------------------------------
+!
+!     This format is used by the ORI.to.CCR, ORI.to.SR, ANDI.to.CCR,
+!	ANDI.to.SR, EORI.to.CCR, EORI.to.SR, ILLEGAL, RESET, NOP, STOP.,
+!	RTE, RTS, TRAPV and RTR instructions.
+!
+!		-- all 16 bits are used to define the instruction.
+!
+!---------- Format 6 --------------------------------------------------
+!
+!     This format is used by the MOVE instruction.
+!
+!		Move.Size<1:0>	:= IR<13:12>,
+!		eadd.b<5:0>	:= IR<11:6>,
+!		eadd.a<5:0>	:= IR<5:0>,
+!
+!---------- Format 7 --------------------------------------------------
+!
+!     This format is used by the SWAP, EXT.W, EXT.L, LINK, UNLK,
+!	MOVE.to.USP and MOVE.from.USP instructions.
+!
+!		reg.a<2:0>	:= IR<2:0>,
+!
+!---------- Format 8 --------------------------------------------------
+!
+!     This format is used by the MOVEM.to.EA & MOVEM.from.EA
+!	instructions.
+!
+!		Sz<>		:= IR<6>,
+!		eadd.a<5:0>	:= IR<5:0>,
+!
+!---------- Format 9 --------------------------------------------------
+!
+!     This format is used by the TRAP instruction.
+!
+!		vector<3:0>	:= IR<3:0>,
+!
+!---------- Format 10 -------------------------------------------------
+!
+!     This format is used by the ADDQ & SUBQ instructions.
+!
+!		Data<2:0>	:= IR<11:9>,
+!		Size<1:0>	:= IR<7:6>,
+!		Eadd.a<5:0>	:= IR<5:0>,
+!
+!---------- Format 11 -------------------------------------------------
+!
+!     This format is used by the Scc instruction.
+!
+!		Cond<3:0>	:= IR<11:8>,
+!		Eadd.a<5:0>	:= IR<5:0>,
+!
+!---------- Format 12 -------------------------------------------------
+!
+!     This format is used by the DBcc instruction.
+!
+!		Cond<3:0>	:= IR<11:8>,
+!		reg.a(2:0>	:= IR<2:0>,
+!
+!---------- Format 13 -------------------------------------------------
+!
+!     This format is used by the Bcc instruction.
+!
+!		Cond<3:0>	:= IR<11:8>,
+!		Value<7:0>	:= IR<7:0>,
+!
+!---------- Format 14 -------------------------------------------------
+!
+!     This format is used by the BSR instruction.
+!
+!		Value<7:0>	:= IR<7:0>,
+!
+!---------- Format 15 -------------------------------------------------
+!
+!     This format is used by the MOVEQ instruction.
+!
+!		reg.b<2:0>	:= IR<11:9>,
+!		Value<7:0>	:= IR<7:0>,
+!
+!---------- Format 16 -------------------------------------------------
+!
+!     This format is used by the OR., SUB, AND. & ADD instructions.
+!
+!		reg.b<2:0>	:= IR<11:9>,
+!		Dir<>		:= IR<8>,
+!		Size<1:0>	:= IR<7:6>,
+!		Eadd.a<5:0>	:= IR<5:0>,
+!
+!---------- Format 17 -------------------------------------------------
+!
+!     This format is used by the SBCD and ABCD instructions.
+!
+!		reg.b<2:0>	:= IR<11:9>,
+!		R.M<>		:= IR<3>,
+!		reg.a<2:0>	:= IR<2:0>,
+!
+!---------- Format 18 -------------------------------------------------
+!
+!     This format is used by the SUBX and ADDX instructions.
+!
+!		reg.b<2:0>	:= IR<11:9>,
+!		Size<1:0>	:= IR<7:6>,
+!		R.M<>		:= IR<3>,
+!		reg.a<2:0>	:= IR<2:0>,
+!
+!---------- Format 19 -------------------------------------------------
+!
+!     This format is used by the CMP and EOR instructions.
+!
+!		reg.b<2:0>	:= IR<11:9>,
+!		Size<1:0>	:= IR<7:6>,
+!		Eadd.a<5:0>	:= IR<5:0>,
+!
+!---------- Format 20 -------------------------------------------------
+!
+!     This format is used by the CMPM instruction.
+!
+!		reg.b<2:0>	:= IR<11:9>,
+!		Size<1:0>	:= IR<7:6>,
+!		reg.a<2:0>	:= IR<2:0>,
+!
+!---------- Format 21 -------------------------------------------------
+!
+!     This format is used by the EXGD, EXGA & EXGM instructions.
+!
+!		reg.b<2:0>	:= IR<11:9>,
+!		reg.a<2:0>	:= IR<2:0>,
+!
+!---------- Format 22 -------------------------------------------------
+!
+!     This format is used by the register shift and rotate
+!	instructions.
+!
+!		C.R<2:0>	:= IR<11:9>,
+!		Dir<>		:= IR<8>,
+!		Size<1:0>	:= IR<7:6>,
+!		I.R<>		:= IR<5>,
+!		reg.a<2:0>	:= IR<2:0>,
+!
+!---------- Format 23 --------------------------------------------------
+!
+!     This format is used by the ADDA, SUBA, CMPA and MOVEA
+!	instructions.
+!
+!		reg.b<2:0>	:= IR<11:9>,
+!		Op.Mode<2:0>	:= IR<8:6>,
+!		Eadd.a<5:0>	:= IR<5:0>,
+!
+!---------- Format 24 --------------------------------------------------
+!
+!     This format is used by the memory shift/rotate instructions.
+!
+!		Dir<>		:= IR<8>,
+!		Eadd.a<5:0>	:= IR<5:0>,
+!
+** memory.state **
+M\Main.Memory[0:PmemSize]<7:0>
+	{sugar: 
+		{array: {
+			class: ram;
+			storage: dynamic;
+			role: implementation;
+			location: off.chip;
+			data.ports:1;
+			max.read.accesses.per.cycle:1;
+			max.write.accesses.per.cycle:1;
+			address.register.location: on.chip;
+			data.register.location: on.chip;
+			address.bus: abus;
+			data.bus: dbus;
+			read.control: read.m;
+			write.control: write.m;
+			max.read.access.time: | 180 |;
+			max.write.access.time: | 180 |;
+			max.cycle.time: | 200 |}}},
+BM\Byte.Size.Memory[0:PmemSize]<7:0> := M[0:PmemSize]<7:0>,
+!WM\Word.Size.Memory[0:PmemSize]<15:0> {increment:2} := M[0:PmemSize]<7:0>,
+
+GLOBAL Binput<7:0>,		! should be connected to
+GLOBAL Winput<15:0>,		! input and output channels.
+GLOBAL Boutput<7:0>,
+GLOBAL Woutput<15:0>,
+
+Read(size<1:0>,addr<31:0>)<31:0> :=
+	BEGIN		! | Read |
+	DECODE size =>
+		BEGIN
+		ByteSize := Read <= Bread(addr),
+		WordSize := Read <= Wread(addr),
+		LongSize := Read <= Lread(addr)
+		END
+	END,		! | Read |
+
+Bread\Byte.read(addr<31:0>)<7:0> :=
+	BEGIN
+	DECODE (addr GTR PmemSize) =>		! should be adressing error,
+		BEGIN				! but make it an input command
+		TRUE  := Bread = Binput,
+		FALSE := Bread = BM[addr<23:0>]
+		END
+	END,
+
+Wread\Word.read(addr<31:0>)<15:0> :=
+	BEGIN
+	DECODE (addr GTR PmemSize) =>		! should be adressing error,
+		BEGIN				! but make it an input command
+		TRUE  := Wread = Winput,
+		FALSE := BEGIN	! hack to get by without increment qualifier
+			 Wread<15:8> = BM[addr<23:0>]			NEXT
+			 Wread<7:0>  = BM[addr<23:0>+1]
+			 END
+		END
+	END,
+
+Lread\Long.read(addr<31:0>)<31:0> :=
+	BEGIN
+	Lread<31:16> = Wread(addr)					NEXT
+	Lread<15:0> = Wread(addr+2)
+	END,
+
+Write(size<1:0>,addr<31:0>)<31:0> :=
+	BEGIN		! | Write |
+	DECODE size =>
+		BEGIN
+		ByteSize := Bwrite(addr) <= Write,
+		WordSize := Wwrite(addr) <= Write,
+		LongSize := Lwrite(addr) <= Write
+		END
+	END,		! | Write |
+
+Bwrite\Byte.write(addr<31:0>)<7:0> :=
+	BEGIN
+	DECODE (addr GTR PmemSize) =>		! should be adressing error,
+		BEGIN				! use as it an output command
+		TRUE  := Boutput = Bwrite,
+		FALSE := BM[addr<23:0>] = Bwrite
+		END
+	END,
+
+Wwrite\Word.write(addr<31:0>)<15:0> :=
+	BEGIN
+	DECODE (addr GTR PmemSize) =>		! should be adressing error,
+		BEGIN				! use as it an output command
+		TRUE  := Woutput = Wwrite,
+		FALSE := BEGIN	! hack to get by without increment qualifier
+			 BM[addr<23:0>] = Wwrite<15:8>			NEXT
+			 BM[addr<23:0>+1] = Wwrite<7:0>
+			 END
+		END
+	END,
+
+Lwrite\Long.write(addr<31:0>)<31:0> :=
+	BEGIN
+	Wwrite(addr) = Lwrite<31:16> NEXT
+	Wwrite(addr+2) = Lwrite<15:0>
+	END
+** main.loop **
+
+main setup :=
+	BEGIN		! | setup |
+	prefetch = '1;		! normally want to be in prefetch mode.
+	SR = "2700;		! start in supervisor mode with interrupts masked.
+	SSP = Lread(0) NEXT	! and initialize the SSP and PC
+	PC = Lread(4) NEXT	! to the vectored values.
+	NIR = Wread(PC) NEXT
+	REPEAT Instr.Cycle()	! begin normal processing.
+	END,		! | setup |
+
+Instr.Cycle :=
+	BEGIN		! | main execution loop |
+	IR = Instr.Stream.Fetch() NEXT
+	Instr.Decode() NEXT
+	Exception.Check()
+	END,		! | main execution loop |
+
+Instr.Stream.Fetch<15:0> :=
+	BEGIN		! | instruction stream fetch |
+	Instr.Stream.Fetch = NIR NEXT
+	PC = PC + 2		 NEXT
+	IF prefetch =>
+		NIR = Wread(PC)
+	END		! | instruction stream fetch |
+** Addressing.Modes **
+
+! memory adressing modes, address generation:
+
+ARI\Address.Register.Indirect(reg<2:0>)<31:0> :=
+	BEGIN		! | ARI |
+	ARI = areg.read(reg)
+	END,		! | ARI |
+
+ARIP.B\ARI.byte.with.postincrement(reg<2:0>)<31:0> :=
+	BEGIN		! | ARIP.B |
+	ARIP.B = areg.read(reg) NEXT
+	DECODE reg =>
+		BEGIN
+		SPnum := areg.write(reg) = ARIP.B + 2,
+		otherwise := areg.write(reg) = ARIP.B + 1
+		END
+	END,		! | ARIP.B |
+
+ARIP.W\ARI.word.with.postincrement(reg<2:0>)<31:0> :=
+	BEGIN		! | ARIP.W |
+	ARIP.W = areg.read(reg)						NEXT
+	areg.write(reg) = ARIP.W + 2
+	END,		! | ARIP.W |
+
+ARIP.L\ARI.long.with.postincrement(reg<2:0>)<31:0> :=
+	BEGIN		! | ARIP.L |
+	ARIP.L = areg.read(reg)						NEXT
+	areg.write(reg) = ARIP.L + 4
+	END,		! | ARIP.L |
+
+ARIM.B\ARI.byte.with.predecrement(reg<2:0>)<31:0> :=
+	BEGIN		! | ARIM.B |
+	DECODE reg =>
+		BEGIN
+		SPnum := ARIM.B = areg.write(reg) = areg.read(reg) - 2,
+		otherwise := ARIM.B = areg.write(reg) = areg.read(reg) - 1
+		END
+	END,		! | ARIM.B |
+
+ARIM.W\ARI.word.with.predecrement(reg<2:0>)<31:0> :=
+	BEGIN		! | ARIM.W |
+	ARIM.W = areg.write(reg) = areg.read(reg) - 2
+	END,		! | ARIM.W |
+
+ARIM.L\ARI.long.with.predecrement(reg<2:0>)<31:0> :=
+	BEGIN		! | ARIM.L |
+	ARIM.L = areg.write(reg) = areg.read(reg) - 4
+	END,		! | ARIM.L |
+
+ARID\ARI.with.displacement(reg<2:0>)<31:0> :=
+	BEGIN		! | ARID |
+	ARID = areg.read(reg) + Instr.Stream.Fetch()
+	END,		! | ARID |
+
+ARII\ARI.with.index(reg<2:0>)<31:0> :=
+	BEGIN		! | ARII |
+	Indirbuf = Instr.Stream.Fetch() NEXT
+	DECODE D.A =>
+		BEGIN
+		0 := DECODE W.L =>	! data.reg 
+			BEGIN
+			0 := ARII = areg.read(reg) + Dreg[R]<15:0> + DI,	! word 
+			1 := ARII = areg.read(reg) + Dreg[R] + DI	! long 
+			END,
+		1 := DECODE W.L =>	! addr.reg 
+			BEGIN
+			0 := ARII = areg.read(reg) +	! word 
+					 areg.read(R)<15:0> + DI,
+			1 := ARII = areg.read(reg) + areg.read(R) + DI	! long 
+			END
+		END
+	END,		! | ARII |
+
+! special addressing modes.
+
+AA.W\Absolute.Address.Word<31:0> :=
+	BEGIN		! | AA.W |
+	AA.W = Instr.Stream.Fetch()
+	END,		! | AA.W |
+
+AA.L\Absolute.Address.Long<31:0> :=		! must specially read the next
+	BEGIN		! | AA.L |				! word if prefetch is turned
+	AA.L<31:16> = Instr.Stream.Fetch() NEXT	! off.
+	DECODE prefetch =>
+		BEGIN
+		'0 := BEGIN	! off 
+			AA.L<15:0> = Wread(PC)				NEXT
+			PC = PC + 2
+			END,
+		'1 := AA.L<15:0> = Instr.Stream.Fetch()	! on  
+		END
+	END,		! | AA.L |
+
+PCD\Program.Counter.with.Displacement<31:0> :=
+	BEGIN		! | PCD |
+	PCD = PC NEXT			! save old PC to add in.
+	PCD = PCD + Instr.Stream.Fetch()
+	END,		! | PCD |
+
+PCI\Program.Counter.with.Index<31:0> :=
+	BEGIN		! | PCI |
+	PCI = PC NEXT			!save old PC to add in.
+	Indirbuf = Instr.Stream.Fetch() NEXT
+	DECODE D.A =>
+		BEGIN
+		0 := DECODE W.L =>	! data.reg 
+			BEGIN
+			0 := PCI = PCI + Dreg[R]<15:0> + DI,	! word 
+			1 := PCI = PCI + Dreg[R] + DI	! long 
+			END,
+		1 := DECODE W.L =>	! addr.reg 
+			BEGIN
+			0 := PCI = PCI + areg.read(R)<15:0> + DI,	! word 
+			1 := PCI = PCI + areg.read(R) + DI	! long 
+			END
+		END
+	END,		! | PCI |
+
+Immediate\Immediate.data.access(size<1:0>)<31:0> :=
+	BEGIN		! | Immediate data fetch |
+	DECODE size =>
+		BEGIN
+		ByteSize := Immediate <= Instr.Stream.Fetch(),
+		WordSize := Immediate <= Instr.Stream.Fetch(),
+		LongSize := BEGIN
+			Immediate<31:16> = Instr.Stream.Fetch()		NEXT
+			Immediate<15:0> = Instr.Stream.Fetch()
+			END
+		END
+	END		! | Immediate data fetch |
+
+** Operand.Manipulation **
+
+! These routines model the operand fetch when using the addressing
+! modes.  The operand write assumes that the destination was the last
+! operand fetched, so the the address for a memory write need not
+! be recalculated.
+
+Addr.Calc(size<1:0>,mode<2:0>,reg<2:0>)<31:0> :=
+	BEGIN		! | The Address Calculation |
+	DECODE mode =>
+		BEGIN
+		'000:'001 := No.Op(),		! if no address, don't calculate.
+		'010 := Addr.Calc = ARI(reg),
+		'011 := DECODE size =>
+			BEGIN
+			ByteSize := Addr.Calc = ARIP.B(reg),
+			WordSize := Addr.Calc = ARIP.W(reg),
+			LongSize := Addr.Calc = ARIP.L(reg)
+			END,
+		'100 := DECODE size =>
+			BEGIN
+			ByteSize := Addr.Calc = ARIM.B(reg),
+			WordSize := Addr.Calc = ARIM.W(reg),
+			LongSize := Addr.Calc = ARIM.L(reg)
+			END,
+		'101 := Addr.Calc = ARID(reg),
+		'110 := Addr.Calc = ARII(reg),
+		'111 := DECODE reg =>
+			BEGIN		! special addressing modes
+			'000 := Addr.Calc = AA.W(),
+			'001 := Addr.Calc = AA.L(),
+			'010 := Addr.Calc = PCD(),
+			'011 := Addr.Calc = PCI()
+			END
+		END
+	END,		! | The Address Calculation |
+
+Opr.Fetch(Osize<1:0>,mode<2:0>,reg<2:0>)<31:0> :=
+	BEGIN		! | The Operand Fetch |
+	DECODE mode @ reg =>
+		BEGIN
+		#00:#07 := Opr.Fetch <= Dreg[reg],	! data register direct
+		#10:#17 := Opr.Fetch <= Areg.Read(reg),	! Address register direct
+		#74 	:= Opr.Fetch <= Immediate(Osize), ! Immediate data.
+		otherwise := Opr.Fetch = Read(Osize,Addr.Calc(Osize,mode,reg))
+		END
+	END,		! | The Operand Fetch |
+
+Opr.Write(Osize<1:0>,mode<2:0>,reg<2:0>)<31:0> :=
+	BEGIN		! | putting the answer back |
+	DECODE mode =>
+		BEGIN
+		'000 := DECODE Osize =>
+			BEGIN
+			ByteSize := Dreg[reg]<7:0> = Opr.Write,
+			WordSize := Dreg[reg]<15:0> = Opr.Write,
+			LongSize := Dreg[reg] = Opr.Write
+			END,
+		'001 := Areg.Write(reg) = Opr.Write,	! Always long.
+		otherwise := Write(Osize,Addr.Calc) = Opr.Write
+		END
+	END		! | putting the answer back |
+
+
+** instruction.decode **
+
+Instr.Decode :=
+	BEGIN		! | instruction decode |
+	DECODE Op.Set =>
+		BEGIN
+		'0000 := group0(),
+		'0001:'0011 := move.group(),
+		'0100 := group4(),
+		'0101 := group5(),
+		'0110 := group6(),
+		'0111 := MOVEQ(),
+		'1000 := group8(),
+		'1001 := group9(),
+		'1011 := group11(),
+		'1100 := group12(),
+		'1101 := group13(),
+		'1110 := group14(),
+		otherwise := Illegal.Instruction = 1
+		END
+	END,		! | instruction decode |
+group0() :=
+	BEGIN		! | group 0 instructions |
+	DECODE Op.Field.2a =>
+		BEGIN
+		'1 := DECODE Op.Field.3 =>
+			BEGIN
+			'001 := MOVEP(),
+			otherwise := DECODE Op.Field.2bc =>
+			   BEGIN
+			   '00 := BTST.D(),
+			   '01 := BCHG.D(),
+			   '10 := BCLR.D(),
+			   '11 := BSET.D()
+			   END
+			END,
+		'0 := DECODE Op.Field.1 =>
+			BEGIN
+			'100 := DECODE Op.Field.2bc =>
+			   BEGIN
+			   '00 := BTST.S(),
+			   '01 := BCHG.S(),
+			   '10 := BCLR.S(),
+			   '11 := BSET.S()
+			   END,
+			'000 := DECODE Op.Field.3@Op.Field.4 =>
+			   BEGIN
+			   '111100 := DECODE Size =>
+				BEGIN
+				ByteSize := ORI.to.CCR(),
+				WordSize := ORI.to.SR(),
+				otherwise := Illegal.Instruction = 1
+				END,
+			   otherwise := ORI()
+			   END,
+			'001 := DECODE Op.Field.3@Op.Field.4 =>
+			   BEGIN
+			   '111100 := DECODE Size =>
+				BEGIN
+				ByteSize := ANDI.to.CCR(),
+				WordSize := ANDI.to.SR(),
+				otherwise := Illegal.Instruction = 1
+				END,
+			   otherwise := ANDI()
+			   END,
+			'010 := SUBI(),
+			'011 := ADDI(),
+			'101 := DECODE Op.Field.3@Op.Field.4 =>
+			   BEGIN
+			   '111100 := DECODE Size =>
+				BEGIN
+				ByteSize := EORI.to.CCR(),
+				WordSize := EORI.to.SR(),
+				otherwise := Illegal.Instruction = 1
+				END,
+			   otherwise := EORI()
+			   END,
+			'110 := CMPI(),
+			otherwise := Illegal.Instruction = 1
+			END
+		END
+	END,		! | group 0 instructions |
+move.group :=
+	BEGIN		! | the move instructions |
+	DECODE Op.Set =>
+		BEGIN
+		'0010:'0011 := DECODE Op.Field.2 =>
+			BEGIN
+			'001 := MOVEA(),
+			otherwise := MOVE()
+			END,
+		otherwise := MOVE()
+		END
+	END,		! | the move instructions |
+
+
+
+
+group4 :=
+	BEGIN		! | group 4 instructions |
+	DECODE op.field.1@op.field.2@op.field.3@op.field.4 =>
+		BEGIN
+		#0300:#0377 :=	MOVE.from.SR(),
+		#0000:#0277 :=	NEGX(),
+		#1000:#1277 :=	CLR(),
+		#2300:#2377 :=	MOVE.to.CCR(),
+		#2000:#2277 :=	NEG(),
+		#3300:#3377 :=	MOVE.to.SR(),
+		#3000:#3277 :=	NOT.(),
+		#4000:#4077 :=	NBCD(),
+		#4100:#4107 :=	SWAP(),
+		#4110:#4177 :=	PEA(),
+		#4200:#4207 :=	EXT.W(),
+		#4300:#4307 :=	EXT.L(),
+		[#4210:#4277,#4310:#4377] :=	MOVEM.RtoEA(),
+		#5374 :=	ILLEGAL(),
+		#5300:#5373 :=	TAS(),
+		#5000:#5277 :=	TST.(),
+		#6200:#6377 :=	MOVEM.EAtoR(),
+		#7107:#7117 :=	TRAP(),
+		#7120:#7127 :=	LINK(),
+		#7130:#7137 :=	UNLK(),
+		#7140:#7147 :=	MOVE.to.USP(),
+		#7150:#7157 :=	MOVE.from.USP(),
+		#7160 :=	RESET(),
+		#7161 :=	NOP(),
+		#7162 :=	STOP.(),
+		#7163 :=	RTE(),
+		#7165 :=	RTS(),
+		#7166 :=	TRAPV(),
+		#7167 :=	RTR(),
+		#7200:#7277 :=	JSR(),
+		#7300:#7377 :=	JMP(),
+		[#0600:#0677,#1600:#1677,
+		 #2600:#2677,#3600:#3677,
+		 #4600:#4677,#5600:#5677,
+		 #6600:#6677,#7600:#7677] :=	CHK(),
+		[#0700:#0777,#1700:#1777,
+		 #2700:#2777,#3700:#3777,
+		 #4700:#4777,#5700:#5777,
+		 #6700:#6777,#7700:#7777] :=	LEA(),
+		otherwise :=	Illegal.Instruction = 1
+		END
+	END,		! | group 4 instructions |
+group5() :=
+	BEGIN		! | group 5 instructions |
+	DECODE Op.Field.2 =>
+		BEGIN
+		'000:'010   := ADDQ(),
+		'100:'110   := SUBQ(),
+		['011,'111] := DECODE Op.Field.3 =>
+			BEGIN
+			'001 := DBcc(),
+			otherwise := Scc()
+			END
+		END
+	END,		! | group 5 instructions |
+
+
+
+
+
+
+
+
+
+group6() :=
+	BEGIN		! | group 6 instructions |
+	DECODE Op.Field.1@Op.Field.2a =>
+		BEGIN
+		'0001 := BSR(),
+		otherwise := Bcc()
+		END
+	END,		! | group 6 instructions |
+
+
+
+
+
+
+
+
+
+
+
+
+
+group8() :=
+	BEGIN		! | group 8 instructions |
+	DECODE Op.Field.2@Op.Field.3ab =>
+		BEGIN
+		'01100:'01111 := DIVU(),
+		'11100:'11111 := DIVS(),
+		'10000 	      := SBCD(),
+		otherwise     := OR.()
+		END
+	END,		! | group 8 instructions |
+group9() :=
+	BEGIN		! | group 9 instructions |
+	DECODE Op.Field.2bc =>
+		BEGIN
+		'11 := SUBA(),
+		otherwise := DECODE Op.Field.2a@Op.field.3ab =>
+			BEGIN
+			'100 := SUBX(),
+			otherwise := SUB()
+			END
+		END
+	END,		! | group 9 instructions |
+
+
+
+
+
+
+
+
+
+
+
+
+
+group11() :=
+	BEGIN		! | group 11 instructions |
+	DECODE Op.Field.2 =>
+		BEGIN
+		'000:'010   := CMP(),
+		['011,'111] := CMPA(),
+		otherwise := DECODE Op.Field.3 =>
+			BEGIN
+			'001 := CMPM(),
+			otherwise := EOR()
+			END
+		END
+	END,		! | group 11 instructions |
+
+
+
+
+
+
+
+
+
+
+
+
+group12() :=
+	BEGIN		! | group 12 instructions |
+	DECODE Op.Field.2@Op.Field.3 =>
+		BEGIN
+		'011000:'011111 := MULU(),
+		'111000:'111111 := MULS(),
+		'100000:'100001 := ABCD(),
+		'101000 	:= EXGD(),
+		'101001 	:= EXGA(),
+		'110001 	:= EXGM(),
+		otherwise 	:= AND.()	! valid? illegal op-codes?
+		END
+	END,		! | group 12 instructions |
+group13() :=
+	BEGIN		! | group 13 instructions |
+	DECODE Op.Field.2bc =>
+		BEGIN
+		'11 := ADDA(),
+		otherwise := DECODE Op.Field.2a@Op.Field.3ab =>
+			BEGIN
+			'100 := ADDX(),
+			otherwise := ADD()
+			END
+		END
+	END,		! | group 13 instructions |
+
+
+
+
+
+
+
+
+
+
+group14() :=
+	BEGIN		! | group 14 instructions |
+	DECODE Op.Field.2bc =>
+		BEGIN
+		'11 := DECODE Op.Field.1 =>	! Memory.Shifts 
+		   BEGIN
+		   '000 := ASM(),	
+		   '001 := LSM(),
+		   '010 := ROXM(),
+		   '011 := ROM(),
+		   otherwise := Illegal.Instruction = 1
+		   END,
+
+		otherwise := DECODE Op.Field.3bc =>	! register shifts.
+		   BEGIN
+		   '00 := ASR(),
+		   '01 := LSR(),
+		   '10 := ROXR(),
+		   '11 := ROR()
+		   END
+		END
+	END	! | group 14 instructions |
+** Exception.Processing **
+
+Exception.Check :=
+	BEGIN		! | exception check |
+	No.Op()
+	END		! | exception check |
+** Arithmetic.Utilities **
+
+Count.One(data<63:0>)<6:0> :=	! count number of 1s in data -- 
+	BEGIN			! hack for the vt translator
+	Count.One = 0							NEXT
+	Loop:=  BEGIN
+	       IF NOT data => LEAVE Loop				NEXT
+	       IF data<0> => Count.One = Count.One +{US} 1		NEXT
+	       data = data SR0 1 					NEXT
+	       RESTART Loop
+	       END
+	END
+** Arithmentic.Routines **
+
+SetCC(CondCodes<4:0>) :=
+	BEGIN		! | Set Condition Codes |
+	Userbyte<4:0> = CondCodes
+	END,		! | Set Condition Codes |
+
+Test(size<1:0>,Val<31:0>) :=
+	BEGIN		! | Test |
+	DECODE size =>
+		BEGIN
+		ByteSize := BEGIN
+				Ntemp = Val<7>;
+				Ztemp = Val<7:0> EQL 0
+			    END,
+		WordSize := BEGIN
+				Ntemp = Val<15>;
+				Ztemp = Val<15:0> EQL 0
+			    END,
+		LongSize := BEGIN
+				Ntemp = Val<31>;
+				Ztemp = Val<31:0> EQL 0
+			    END
+		END
+	END,		! | Test |
+Sum(size<1:0>,S<31:0>,D<31:0>,Xtend<>)<31:0> :=
+	BEGIN		! | Sum |
+	DECODE size =>
+		BEGIN
+		ByteSize := Sum = BSum(S,D,Xtend),
+		WordSize := Sum = WSum(S,D,Xtend),
+		LongSize := Sum = LSum(S,D,Xtend)
+		END
+	END,		! | Sum |
+
+BSum\Byte.Sum(S<7:0>,D<7:0>,Xtend<>)<7:0> :=
+	BEGIN		! | Byte Addition |
+	NZVC<0> @ BSum = S + D +{US} Xtend				NEXT
+	Vtemp = (S<7> AND D<7> AND NOT BSum<7>) OR
+		((NOT S<7>) AND (NOT D<7>) AND BSum<7>);
+	Test(ByteSize,BSum)
+	END,		! | Byte Addition |
+
+WSum\Word.Sum(S<15:0>,D<15:0>,Xtend<>)<15:0> :=
+	BEGIN		! | Word Addition |
+	NZVC<0> @ WSum = S + D +{US} Xtend				NEXT
+	Vtemp = (S<15> AND D<15> AND NOT WSum<15>) OR
+		((NOT S<15>) AND (NOT D<15>) AND WSum<15>);
+	Test(WordSize,WSum)
+	END,		! | Word Addition |
+
+LSum\Long.Sum(S<31:0>,D<31:0>,Xtend<>)<31:0> :=
+	BEGIN		! | Long Addition (ha ha) |
+	NZVC<0> @ LSum = S + D +{US} Xtend				NEXT
+	Vtemp = (S<31> AND D<31> AND NOT LSum<31>) OR
+		((NOT S<31>) AND (NOT D<31>) AND LSum<31>);
+	Test(LongSize,LSum)
+	END,		! | Long Addition (ha ha) |
+
+BCD.Sum(S<7:0>,D<7:0>,Xtend<>)<7:0> :=
+	BEGIN		! | Binary Coded Decimal Addition |
+	BCD.Sum = S<3:0> + D<3:0> +{US} Xtend				NEXT
+	NZVC<0> @ BCD.Sum = BCD.Sum + ((S<7:4> + D<7:4>) * 16)		NEXT
+	IF BCD.Sum<3:0> GEQ{us} '1010 =>
+		BEGIN
+		BCD.Sum<3:0> = BCD.Sum<3:0> - '1010;
+		BCD.Sum<7:4> = BCD.Sum<7:4> +{US} '01
+		END							NEXT
+	IF BCD.Sum<7:4> GEQ{us} '1010 =>
+		BEGIN
+		BCD.Sum<7:4> = BCD.Sum<7:4> - '1010;
+		Ctemp = '1
+		END							NEXT
+	Test(ByteSize,BCD.Sum)
+	END,		! | Binary Coded Decimal Addition |
+Diff(size<1:0>,S<31:0>,D<31:0>,Xtend<>)<31:0> :=
+	BEGIN		! | Diff |
+	DECODE Size =>
+		BEGIN
+		ByteSize := Diff = BDiff(S,D,Xtend),
+		WordSize := Diff = WDiff(S,D,Xtend),
+		LongSize := Diff = LDiff(S,D,Xtend)
+		END
+	END,		! | Diff |
+
+BDiff\Byte.Difference(S<7:0>,D<7:0>,Xtend<>)<7:0> :=
+	BEGIN		! | Byte Subtraction |
+	NZVC<0> @ BDiff = D - S -{US} Xtend				NEXT
+	Vtemp = ((NOT S<7>) AND D<7> AND NOT BDiff<7>) OR
+		(S<7> AND (NOT D<7>) AND BDiff<7>);
+	Test(ByteSize,Bdiff)
+	END,		! | Byte Subtraction |
+
+WDiff\Word.Difference(S<15:0>,D<15:0>,Xtend<>)<15:0> :=
+	BEGIN		! | Word Subtraction |
+	NZVC<0> @ WDiff = D - S -{US} Xtend				NEXT
+	Vtemp = ((NOT S<15>) AND D<15> AND NOT WDiff<15>) OR
+		(S<15> AND (NOT D<15>) AND WDiff<15>);
+	Test(WordSize,Wdiff)
+	END,		! | Word Subtraction |
+
+LDiff\Long.Difference(S<31:0>,D<31:0>,Xtend<>)<31:0> :=
+	BEGIN		! | Long Subtraction |
+	NZVC<0> @ LDiff = D - S -{US} Xtend				NEXT
+	Vtemp = ((NOT S<31>) AND D<31> AND NOT LDiff<31>) OR
+		(S<31> AND (NOT D<31>) AND LDiff<31>);
+	Test(LongSize,LDiff)
+	END,		! | Long Subtraction |
+
+BCD.Diff(S<7:0>,D<7:0>,Xtend<>)<7:0> :=
+	BEGIN		! | Binary Coded Decimal Subtraction |
+	BCD.Diff = (D<3:0> +{US} (10 * D<7:4>)) - 
+		   (S<3:0> +{US} (10 * S<7:4>)) -{US} Xtend		NEXT
+	IF BCD.Diff<7> EQL{US} '1 =>
+		BEGIN
+		BCD.Diff = BCD.Diff + 100				NEXT
+		Ctemp = '1
+		END							NEXT
+	temp8 = BCD.Diff MOD 10						NEXT
+	BCD.Diff<7:4> = BCD.Diff / 10					NEXT
+	BCD.Diff<3:0> = temp8						NEXT
+	IF BCD.Diff<3:0> GEQ{us} '1010 =>
+		BEGIN
+		BCD.Diff<3:0> = BCD.Diff<3:0> - '1010;
+		BCD.Diff<7:4> = BCD.Diff<7:4> + '01
+		END							NEXT
+	Test(ByteSize,BCD.Diff)
+	END,		! | Binary Coded Decimal Subtraction |
+AS\Arithmetic.Shift(size<2:0>,Dir<>,Num<5:0>,REF data<31:0>) :=
+	BEGIN		! | Arithmetic Shift |
+	DECODE Dir =>
+		BEGIN
+		Right := BEGIN
+			DECODE Size =>
+				BEGIN
+				ByteSize := data<7:0> @ NZVC<0> =
+					(data<7:0> @ Ctemp) SRD Num,
+				WordSize := data<15:0> @ NZVC<0> =
+					(data<15:0> @ Ctemp) SRD Num,
+				LongSize := data<31:0> @ NZVC<0> =
+					(data<31:0> @ Ctemp) SRD Num
+				END					NEXT
+			Vtemp = 0
+			END,
+		Left  := BEGIN
+			temp64 = 0					NEXT
+			DECODE Size =>
+				BEGIN
+				ByteSize := temp64 @ data<7:0> =
+					temp64 @ data<7:0> SL0 Num,
+				WordSize := temp64 @ data<15:0> =
+					temp64 @ data<15:0> SL0 Num,
+				LongSize := temp64 @ data<31:0> =
+					temp64 @ data<31:0> SL0 Num
+				END					NEXT
+			Ctemp = temp64<0>;
+			Vtemp = NOT ((Count.One(temp64) EQL Num) OR
+			        (Count.One(temp64) EQL 0))
+			END
+		END							NEXT
+	Test(Size,data)
+	END,		! | Arithmetic Shift |
+LS\Logical.Shift(size<2:0>,Dir<>,Num<5:0>,REF data<31:0>) :=
+	BEGIN		! | Logical Shift |
+	DECODE Dir =>
+		BEGIN
+		Right := BEGIN
+			DECODE Size =>
+				BEGIN
+				ByteSize := data<7:0> @ NZVC<0> =
+					data<7:0> @ Ctemp SR0 Num,
+				WordSize := data<15:0> @ NZVC<0> =
+					data<15:0> @ Ctemp SR0 Num,
+				LongSize := data<31:0> @ NZVC<0> =
+					data<31:0> @ Ctemp SR0 Num
+				END
+			END,
+		Left  := BEGIN
+			DECODE Size =>
+				BEGIN
+				ByteSize := NZVC<0> @ data<7:0> =
+					Ctemp @ data<7:0> SL0 Num,
+				WordSize := NZVC<0> @ data<15:0> =
+					Ctemp @ data<15:0> SL0 Num,
+				LongSize := NZVC<0> @ data<31:0> =
+					Ctemp @ data<31:0> SL0 Num
+				END
+			END
+		END							NEXT
+	Test(Size,data)
+	END,		! | Logical Shift |
+RO\Rotate.without.Extend(size<2:0>,Dir<>,Num<5:0>,REF data<31:0>) :=
+	BEGIN		! | Rotate without Extend |
+	DECODE Dir =>
+		BEGIN
+		Right := BEGIN
+			DECODE Size =>
+				BEGIN
+				ByteSize := data<7:0>  = data<7:0>  SRR Num,
+				WordSize := data<15:0> = data<15:0> SRR Num,
+				LongSize := data<31:0> = data<31:0> SRR Num
+				END					NEXT
+			Ctemp = data<0>
+			END,
+		Left  := BEGIN
+			DECODE Size =>
+				BEGIN
+				ByteSize := BEGIN
+					data<7:0>  = data<7:0>  SLR Num	NEXT
+					Ctemp = data<7>
+					END,
+				WordSize := BEGIN
+					data<15:0> = data<15:0> SLR Num	NEXT
+					Ctemp = data<15>
+					END,
+				LongSize := BEGIN
+					data<31:0> = data<31:0> SLR Num	NEXT
+					Ctemp = data<31>
+					END
+				END
+			END
+		END							NEXT
+	Test(Size,data)
+	END,		! | Rotate without Extend |
+RE\Rotate.with.Extend(size<2:0>,Dir<>,Num<5:0>,REF data<31:0>) :=
+	BEGIN		! | Rotate with Extend |
+	DECODE Dir =>
+		BEGIN
+		Right := BEGIN
+			DECODE Size =>
+				BEGIN
+				ByteSize := SR<4> @ data<7:0> =
+					X @ data<7:0> SRR Num,
+				WordSize := SR<4> @ data<15:0> =
+					X @ data<15:0> SRR Num,
+				LongSize := SR<4> @ data<31:0> =
+					X @ data<31:0> SRR Num
+				END
+			END,
+		Left  := BEGIN
+			DECODE Size =>
+				BEGIN
+				ByteSize := SR<4> @ data<7:0> =
+					X @ data<7:0> SLR Num,
+				WordSize := SR<4> @ data<15:0> =
+					X @ data<15:0> SLR Num,
+				LongSize := SR<4> @ data<31:0> =
+					X @ data<31:0> SLR Num
+				END
+			END
+		END							NEXT
+	Ctemp = X;
+	Test(Size,data)
+	END,		! | Rotate with Extend |
+CC\Cond.Test.Comp(cond<3:0>)<> :=
+	BEGIN		! | Conditional Test Computation |
+	DECODE cond =>
+		BEGIN
+		"0 := CC = 1,	! True  
+		"1 := CC = 0,	! False 
+		"2 := CC = (NOT C) AND (NOT Z),	! High  
+		"3 := CC = C OR Z,	! Low.Or.Same 
+		"4 := CC = NOT C,	! Carry.Clear 
+		"5 := CC = C,	! Carry.Set   
+		"6 := CC = NOT Z,	! Not.Equal   
+		"7 := CC = Z,	! Equal       
+		"8 := CC = NOT V,	! Overflow.Clear 
+		"9 := CC = V,	! Overflow.Set   
+		"A := CC = NOT N,	!Positive	  
+		"B := CC = N,	!Negative	  
+		"C := CC = (N AND V) OR ((NOT N) AND (NOT V)),	!Greater.Or.Equal 
+		"D := CC = (N AND NOT V) OR ((NOT N) AND V),	!Less.Than      
+		"E := CC = ((N AND V) OR ((NOT N) AND (NOT V))) AND NOT Z,	!Greater.Than   
+		"F := CC = Z OR (N AND NOT V) OR ((NOT N) AND V)	!Less.or.Equal  
+		END
+	END		! | Conditional Test Computation |
+** Instruction.List **
+
+! WARNING: The bit patterns given in the instruction description are not
+! unique nor do they exclude Illegal instructions.
+
+ABCD() :=		! Add Decimal with Extend.  Size = Byte.
+	BEGIN		! | ABCD |	! '1100 ??? 100 00? ??? -- group 12, format 17.
+	DECODE R.M =>
+		BEGIN
+		'0 := Dreg[reg.b] =
+			BCD.Sum(Dreg[reg.a],Dreg[reg.b],X),
+		'1 := Opr.Write(Size,PreDec,reg.b) =
+			BCD.Sum(Opr.Fetch(Size,PreDec,reg.a),
+				Opr.Fetch(Size,PreDec,reg.b),
+				X)
+		END							NEXT
+	SetCC(Ctemp @ Ntemp @ (Z AND Ztemp) @ Vtemp @ Ctemp)
+	END,		! | ABCD |
+
+ADD() :=		! Add Binary.  Size = Byte,Word,Long.
+	BEGIN		! | ADD |	! '1101 ??? ??? ??? ??? -- group 13, format 16.
+	DECODE Dir =>
+		BEGIN
+		'0 := Dreg[reg.b] =	! ToReg 
+			Sum(Size,Opr.Fetch(Size,mode.a,reg.a),Dreg[reg.b],0),
+		'1 := Opr.Write(Size,mode.a,reg.a) =	! ToEA  
+			Sum(Size,Dreg[reg.b],Opr.Fetch(Size,mode.a,reg.a),0)
+		END	NEXT
+	SetCC(Ctemp @ Ntemp @ Ztemp @ Vtemp @ Ctemp)
+	END,		! | ADD |
+
+ADDA() :=		! Add Address.  Size = Word,Long.
+	BEGIN		! | ADDA |	! '1101 ??? ?11 ??? ??? -- group 13, format 23.
+	DECODE Op.Mode =>
+		BEGIN
+		'011 := Areg.Write(reg.b) =	! Word 
+			Sum(LongSize,Areg.Read(reg.b),
+				     Opr.Fetch(WordSize,mode.a,reg.a),0),
+		'111 := Areg.Write(reg.b) =	! Long 
+			Sum(LongSize,Areg.Read(reg.b),
+				     Opr.Fetch(LongSize,mode.a,reg.a),0)
+		END
+	END,		! | ADDA |
+
+ADDI() :=		! Add Immediate.  Size = Byte,Word,Long.
+	BEGIN		! | ADDI |	! '0000 011 0?? ??? ??? + Data Word(s) -- group 0, format 4.
+	Opr.Write(Size,mode.a,reg.a) =
+	       Sum(Size,Immediate(Size),Opr.Fetch(Size,mode.a,reg.a),0) NEXT
+	SetCC(Ctemp @ Ntemp @ Ztemp @ Vtemp @ Ctemp)
+	END,		! | ADDI |
+
+ADDQ() :=		! Add Quick.  Size = Byte,Word,Long.
+	BEGIN		! | ADDQ |	! '0101 ??? 0?? ??? ??? -- group 5, format 10.
+	DECODE Data =>	! (Only Sizes Word & Long allowed for Address regs)
+		BEGIN
+		'000 := temp32 = 8,
+		otherwise := temp32 = Data
+		END							NEXT
+	Opr.Write(Size,mode.a,reg.a) =
+		Sum(Size,temp32,Opr.Fetch(Size,mode.a,reg.a),0)		NEXT
+	IF mode.a NEQ '001 =>		! Not an address register.
+		SetCC(Ctemp @ Ntemp @ Ztemp @ Vtemp @ Ctemp)
+	END,		! | ADDQ |
+
+ADDX() :=		! Add Binary Extended.  Size = Byte,Word,Long.
+	BEGIN		! | ADDX |	! '1101 ??? 1?? 00? ??? -- group 13, format 18.
+	DECODE R.M =>
+		BEGIN
+		'0 := Opr.Write(Size,DataRegDir,reg.b) =	! Register 
+			Sum(Size,Opr.Fetch(Size,DataRegDir,reg.a),
+				 Opr.Fetch(Size,DataRegDir,reg.b),X),
+		'1 := Opr.Write(Size,PreDec,reg.b) =	! Memory   
+			Sum(Size,Opr.Fetch(Size,PreDec,reg.a),
+				 Opr.Fetch(Size,PreDec,reg.b),X)
+		END	NEXT
+	SetCC(Ctemp @ Ntemp @ (Z AND Ztemp) @ Vtemp @ Ctemp)
+	END,		! | ADDX |
+
+AND.() :=		! And Logical.  Size = Byte,Word,Long.
+	BEGIN		! | AND. |	! '1100 ??? ??? ??? ??? -- group 12, format 16.
+	DECODE Dir =>
+		BEGIN
+		'0 := Opr.Write(Size,DataRegDir,reg.b) =	! ToReg 
+			Opr.Fetch(Size,mode.a,reg.a) AND Dreg[reg.b],
+		'1 := Opr.Write(Size,mode.a,reg.a) =	! ToEadd 
+			Dreg[reg.b] AND Opr.Fetch(Size,mode.a,reg.a)
+		END							NEXT
+	Test(Size,Opr.Write)						NEXT
+	SetCC(X @ Ntemp @ Ztemp @ '0 @ '0)
+	END,		! | AND. |
+
+ANDI() :=		! And Logical Immediate.  Size = Byte,Word,Long.
+	BEGIN		! | ANDI |	! '0000 001 0?? ??? ??? + Data Word(s) -- group 0, format 4.
+	Opr.Write(Size,mode.a,reg.a) =
+		Immediate(Size) AND Opr.Fetch(Size,mode.a,reg.a)	NEXT
+	Test(Size,Opr.Write)						NEXT
+	SetCC(X @ Ntemp @ Ztemp @ '0 @ '0)
+	END,		! | ANDI |
+
+ANDI.to.CCR() :=	! And Logical Immediate to Condition Codes. Size=Byte.
+			! (Size is encoded in the proper field, anyway.)
+			! '0000 001 000 111 100 + Data Word -- group 0, format 5.
+	BEGIN		! | ANDI.to.CCR |
+	Userbyte = Userbyte AND Immediate(Size)
+	END,		! | ANDI.to.CCR |
+
+ANDI.to.SR() :=		! And Logical Immediate to Status Register (Privileged Instruction).
+			! Size = Word. (Is encoded in instruction)
+			! '0000 001 001 111 100 + Data Word -- group 0, format 5.
+	BEGIN		! | ANDI.to.SR |
+	DECODE Smode =>
+		BEGIN
+		'0 := Privilege.Violation = 1,
+		'1 := SR = SR AND Immediate(Size)
+		END
+	END,		! | ANDI.to.SR |
+
+ASM() :=		! Arithmetic Shift (Memory). Size=Word.
+	BEGIN		! | ASM |	! '1110 000 ?11 ??? ??? -- group 14, format 24.
+	temp32 = Opr.Fetch(WordSize,mode.a,reg.a)			NEXT
+	AS(WordSize,Dir,1,temp32)					NEXT
+	Opr.Write(WordSize,mode.a,reg.a) = temp32			NEXT
+	SetCC(Ctemp @ NZVC)
+	END,		! | ASM |
+
+ASR() :=		! Arithmetic Shift (Register). Size=Byte,Word,Long.
+	BEGIN		! | ASR |	! '1110 ??? ??? ?00 ??? -- group 14, format 22.
+	DECODE I.R =>
+		BEGIN
+		'0 := DECODE C.R =>	! count 
+			BEGIN
+			0 := temp8 = 8,
+			otherwise := temp8 = C.R
+			END,
+		'1 := temp8 = Dreg[reg.b]<5:0>	! reg 
+		END							NEXT
+	AS(Size,Dir,temp8,Dreg[reg.a])					NEXT
+	DECODE temp8 =>
+		BEGIN
+		'0 := SetCC(X @ Ntemp @ Ztemp @ Vtemp @ '0),
+		otherwise := SetCC(Ctemp @ NZVC)
+		END
+	END,		! | ASR |
+Bcc() :=		! Branch Conditionally.  Size = Byte,Word.
+	BEGIN		! | Bcc |	! '0110 ??? ??? ??? ??? + [Data Word] -- group 6, format 13.
+	DECODE value =>
+		BEGIN
+		"00 := DECODE CC(cond) =>	! long.displacement 
+			BEGIN
+			0 := Instr.Stream.Fetch(), !skip over next word.	! False 
+			1 := BEGIN	! True  
+				   PC = PC + NIR			NEXT
+				   NIR = Wread(PC)	! refill pipeline
+				   END
+			END,
+		otherwise := IF CC(cond) =>
+				   BEGIN
+				   PC = PC + Value			NEXT
+				   NIR = Wread(PC)	! refill pipeline
+				   END
+		END
+	END,		! | Bcc |
+
+BCHG.D() :=		! Test a Bit and Change (Bit Number Dynamic). Size=Byte,Long.
+	BEGIN		! | BCHG.D | !'0000 ??? 101 ??? ??? -- group 0, format 1.
+	DECODE mode.a =>
+		BEGIN
+		DataRegDir := BEGIN
+			temp8 = Dreg[reg.b]<4:0>			NEXT
+			Z = NOT Opr.Fetch(LongSize,mode.a,reg.a)<temp8>	NEXT
+			Opr.Fetch<temp8> = Z				NEXT
+			Opr.write(LongSize,mode.a,reg.a) = Opr.Fetch
+			      END,
+		otherwise  := BEGIN
+			temp8 = Dreg[reg.b]<2:0>			NEXT
+			Z = NOT Opr.Fetch(ByteSize,mode.a,reg.a)<temp8>	NEXT
+			Opr.Fetch<temp8> = Z				NEXT
+			Opr.write(ByteSize,mode.a,reg.a) = Opr.Fetch
+			      END
+		END
+	END,		! | BCHG.D |
+
+BCHG.S() :=		! Test a Bit and Change (Bit Number Static). Size=Byte,Long.
+	BEGIN		! | BCHG.S | !'0000 100 001 ??? ??? + Data Word -- group 0, format 2.
+	DECODE mode.a =>
+		BEGIN
+		DataRegDir := BEGIN
+			temp8 = Immediate(ByteSize)<4:0>		NEXT
+			Z = NOT Opr.Fetch(LongSize,mode.a,reg.a)<temp8>	NEXT
+			Opr.Fetch<temp8> = Z				NEXT
+			Opr.write(LongSize,mode.a,reg.a) = Opr.Fetch
+			      END,
+		otherwise  := BEGIN
+			temp8 = Immediate(ByteSize)<2:0> 		NEXT
+			Z = NOT Opr.Fetch(ByteSize,mode.a,reg.a)<temp8>	NEXT
+			Opr.Fetch<temp8> = Z				NEXT
+			Opr.write(ByteSize,mode.a,reg.a) = Opr.Fetch
+			      END
+		END
+	END,		! | BCHG.S |
+
+BCLR.D() :=		! Test a Bit and Clear (Bit Number Dynamic). Size=Byte,Long.
+	BEGIN		! | BCLR.D | !'0000 ??? 110 ??? ??? -- group 0, format 1.
+	DECODE mode.a =>
+		BEGIN
+		DataRegDir := BEGIN
+			temp8 = Dreg[reg.b]<4:0>			NEXT
+			Z = NOT Opr.Fetch(LongSize,mode.a,reg.a)<temp8>	NEXT
+			Opr.Fetch<temp8> = 0				NEXT
+			Opr.write(LongSize,mode.a,reg.a) = Opr.Fetch
+			      END,
+		otherwise  := BEGIN
+			temp8 = Dreg[reg.b]<2:0>			NEXT
+			Z = NOT Opr.Fetch(ByteSize,mode.a,reg.a)<temp8>	NEXT
+			Opr.Fetch<temp8> = 0				NEXT
+			Opr.write(ByteSize,mode.a,reg.a) = Opr.Fetch
+			      END
+		END
+	END,		! | BCLR.D |
+
+BCLR.S() :=		! Test a Bit and Clear (Bit Number Static). Size=Byte,Long.
+	BEGIN		! | BCLR.S | !'0000 100 010 ??? ??? + Data Word -- group 0, format 2.
+	DECODE mode.a =>
+		BEGIN
+		DataRegDir := BEGIN
+			temp8 = Immediate(ByteSize)<4:0>		NEXT
+			Z = NOT Opr.Fetch(LongSize,mode.a,reg.a)<temp8>	NEXT
+			Opr.Fetch<temp8> = 0				NEXT
+			Opr.write(LongSize,mode.a,reg.a) = Opr.Fetch
+			      END,
+		otherwise  := BEGIN
+			temp8 = Immediate(ByteSize)<2:0> 		NEXT
+			Z = NOT Opr.Fetch(ByteSize,mode.a,reg.a)<temp8>	NEXT
+			Opr.Fetch<temp8> = 0				NEXT
+			Opr.write(ByteSize,mode.a,reg.a) = Opr.Fetch
+			      END
+		END
+	END,		! | BCLR.S |
+
+BSET.D() :=		! Test a Bit and Set (Bit Number Dynamic). Size=Byte,Long.
+	BEGIN		! | BSET.D | !'0000 ??? 111 ??? ??? -- group 0, format 1.
+	DECODE mode.a =>
+		BEGIN
+		DataRegDir := BEGIN
+			temp8 = Dreg[reg.b]<4:0>			NEXT
+			Z = NOT Opr.Fetch(LongSize,mode.a,reg.a)<temp8>	NEXT
+			Opr.Fetch<temp8> = 1				NEXT
+			Opr.write(LongSize,mode.a,reg.a) = Opr.Fetch
+			      END,
+		otherwise  := BEGIN
+			temp8 = Dreg[reg.b]<2:0>			NEXT
+			Z = NOT Opr.Fetch(ByteSize,mode.a,reg.a)<temp8>	NEXT
+			Opr.Fetch<temp8> = 1				NEXT
+			Opr.write(ByteSize,mode.a,reg.a) = Opr.Fetch
+			      END
+		END
+	END,		! | BSET.D |
+
+BSET.S() :=		! Test a Bit and Set (Bit Number Static). Size=Byte,Long.
+	BEGIN		! | BSET.S | !'0000 100 011 ??? ??? + Data Word -- group 0, format 2.
+	DECODE mode.a =>
+		BEGIN
+		DataRegDir := BEGIN
+			temp8 = Immediate(ByteSize)<4:0>		NEXT
+			Z = NOT Opr.Fetch(LongSize,mode.a,reg.a)<temp8>	NEXT
+			Opr.Fetch<temp8> = 1				NEXT
+			Opr.write(LongSize,mode.a,reg.a) = Opr.Fetch
+			      END,
+		otherwise  := BEGIN
+			temp8 = Immediate(ByteSize)<2:0> 		NEXT
+			Z = NOT Opr.Fetch(ByteSize,mode.a,reg.a)<temp8>	NEXT
+			Opr.Fetch<temp8> = 1				NEXT
+			Opr.write(ByteSize,mode.a,reg.a) = Opr.Fetch
+			      END
+		END
+	END,		! | BSET.S |
+
+BSR() :=		! Branch Subroutine.  Size = Byte,Long
+	BEGIN		! | BSR |	! '0110 000 1?? ??? ??? + [Data Word] -- group 6, format 14.
+	DECODE value =>
+		BEGIN
+		"00 :=	! long.displacement 
+			BEGIN	! save the return address on the stack.
+			Lwrite(ARIM.L(SPnum)) = PC + 2			NEXT
+			PC = PC + NIR					NEXT
+			NIR = Wread(PC)			! refill pipeline
+			END,
+		otherwise :=
+			BEGIN
+			Lwrite(ARIM.L(SPnum)) = PC			NEXT
+			PC = PC + Value					NEXT
+			NIR = Wread(PC)			! refill pipeline
+			END
+		END
+	END,		! | BSR |
+
+BTST.D() :=		! Test a Bit (Bit Number Dynamic). Size=Byte,Long.
+	BEGIN		! | BTST.D | !'0000 ??? 100 ??? ??? -- group 0, format 1.
+	DECODE mode.a =>
+		BEGIN
+		DataRegDir := BEGIN
+			temp8 = Dreg[reg.b]<4:0>			NEXT
+			Z = NOT Opr.Fetch(LongSize,mode.a,reg.a)<temp8>
+			      END,
+		otherwise  := BEGIN
+			temp8 = Dreg[reg.b]<2:0>			NEXT
+			Z = NOT Opr.Fetch(ByteSize,mode.a,reg.a)<temp8>
+			      END
+		END
+	END,		! | BTST.D |
+
+BTST.S() :=		! Test a Bit (Bit Number Static). Size=Byte,Long.
+	BEGIN		! | BTST.S | !'0000 100 000 ??? ??? + Data Words -- group 0, format 2.
+	DECODE mode.a =>
+		BEGIN
+		DataRegDir := BEGIN
+			temp8 = Immediate(ByteSize)<4:0>		NEXT
+			Z = NOT Opr.Fetch(LongSize,mode.a,reg.a)<temp8>
+			      END,
+		otherwise  := BEGIN
+			temp8 = Immediate(ByteSize)<2:0> 		NEXT
+			Z = NOT Opr.Fetch(ByteSize,mode.a,reg.a)<temp8>
+			      END
+		END
+	END,		! | BTST.S |
+CHK() :=		! Check Register Against Bounds. Size = Word.
+	BEGIN		! | CHK |	! '0100 ??? 110 ??? ??? -- group 4, format 1.
+	No.Op()
+	END,		! | CHK |
+
+CLR() :=		! Clear an Operand.  Size = Byte,Word,Long.
+	BEGIN		! | CLR |	! '0100 001 0?? ??? ??? -- group 4, format 4.
+			! Read value. (and set up address)
+	Opr.Fetch(Size,mode.a,reg.a)					NEXT
+	Opr.Write(Size,mode.a,reg.a) = 0				NEXT
+	SetCC(X @ '0 @ '1 @ '0 @ '0)
+	END,		! | CLR |
+
+CMP() :=		! Compare.  Size = Byte,Word,Long
+	BEGIN		! | CMP |	! '1011 ??? 0?? ??? ??? -- group 11, format 19.
+	Diff(Size,Opr.Fetch(Size,mode.a,reg.a),Dreg[reg.b],0)	NEXT
+	SetCC(X @ Ntemp @ Ztemp @ Vtemp @ Ctemp)
+	END,		! | CMP |
+
+CMPA() :=		! Compare Address. Size = Word,Long.
+	BEGIN		! | CMPA |	! '1011 ??? ?11 ??? ??? -- group 11, format 
+	DECODE Op.Mode =>
+		BEGIN
+		'011 := Diff(LongSize,Opr.Fetch(WordSize,mode.a,reg.a),	! Word 
+					   Areg.read(reg.b),0),
+		'111 := Diff(LongSize,Opr.Fetch(LongSize,mode.a,reg.a),	! Long 
+					   Areg.read(reg.b),0)
+		END							NEXT
+	SetCC(X @ Ntemp @ Ztemp @ Vtemp @ Ctemp)
+	END,		! | CMPA |
+
+CMPI() :=		! Compare Immediate.  Size = Byte,Word,Long.
+	BEGIN		! | CMPI |	! '0000 110 0?? ??? ??? + Data Word(s) -- group 0, format 4.
+	Diff(Size,Immediate(Size),Opr.Fetch(Size,mode.a,reg.a),0)	NEXT
+	SetCC(X @ Ntemp @ Ztemp @ Vtemp @ Ctemp)
+	END,		! | CMPI |
+
+CMPM() :=		! Compare Memory.  Size = Byte,Word,Long.
+	BEGIN		! | CMPM |	! '1011 ??? 1?? 001 ??? -- group 11, format 20
+	Diff(Size,Opr.Fetch(Size,PostInc,reg.a),
+	      Opr.Fetch(Size,PostInc,reg.a),0)				NEXT
+	SetCC(X @ Ntemp @ Ztemp @ Vtemp @ Ctemp)
+	END,		! | CMPM |
+DBcc() :=		! Test Condition, Decrement, and Branch. Size = Word.
+	BEGIN		! | DBcc |	! '0101 ??? ?11 001 ??? -- group 5, format 12.
+	DECODE CC(cond) =>
+		BEGIN
+		0 := Instr.Stream.Fetch(), !skip over next word.	! False 
+		1 := BEGIN	! True (check if only bits 15:0 are decremented)
+		     Dreg[reg.a]<15:0> = Dreg[reg.a]<15:0> - 1		NEXT
+		     DECODE (Dreg[reg.a]<15:0> EQL "FFFF) =>
+		   	BEGIN
+			'0 := BEGIN
+			      PC = PC + NIR			NEXT
+			      NIR = Wread(PC)    ! refill pipeline
+			      END,
+			'1 := Instr.Stream.Fetch()	! nobranch
+			END
+		     END
+		END
+	END,		! | DBcc |
+
+DIVS() :=		! Signed Divide.  Size = Word.
+	BEGIN		! | DIVS |	! '1000 ??? 111 ??? ??? -- group 8, format 1.
+	temp16 = Opr.Fetch(WordSize,mode.a,reg.a)			NEXT
+!	IF temp16 EQ 0 =>
+!		<< initiate a divide by zero trap >>
+	temp32 = Dreg[reg.b] / temp16					NEXT
+	DECODE temp32<31:16> =>
+		BEGIN
+		[0,"FFFF] := Vtemp = 0,
+		otherwise := Vtemp = 1
+		END							NEXT
+	Test(WordSize,temp32)						NEXT
+	temp32<31:16> = Dreg[reg.b] MOD temp16				NEXT
+	IF NOT Vtemp =>
+		Dreg[reg.b] = temp32					NEXT
+	SetCC(X @ Ntemp @ Ztemp @ Vtemp @ '0)
+	END,		! | DIVS |
+
+DIVU() :=		! Unsigned Divide.  Size = Word.
+	BEGIN		! | DIVU |	! '1000 ??? 011 ??? ??? -- group 8, format 1.
+	temp16 = Opr.Fetch(WordSize,mode.a,reg.a)			NEXT
+!	IF temp16 EQ 0 =>
+!		<< initiate a divide by zero trap >>
+	temp32 = Dreg[reg.b] / temp16					NEXT
+	DECODE temp32<31:16> =>
+		BEGIN
+		0 	  := Vtemp = 0,
+		otherwise := Vtemp = 1
+		END							NEXT
+	Test(WordSize,temp32)						NEXT
+	temp32<31:16> = Dreg[reg.b] MOD temp16				NEXT
+	IF NOT Vtemp =>
+		Dreg[reg.b] = temp32					NEXT
+	SetCC(X @ Ntemp @ Ztemp @ Vtemp @ '0)
+	END,		! | DIVU |
+EOR() :=		! Exclusive Or.  Size = Byte,Word,Long.
+	BEGIN		! | EOR |	! '1011 ??? 1?? ??? ??? -- group 11, format 19.
+	Opr.Write(Size,mode.a,reg.a) =
+		Dreg[reg.b] XOR Opr.Fetch(Size,mode.a,reg.a)		NEXT
+	Test(Size,Opr.Write)						NEXT
+	SetCC(X @ Ntemp @ Ztemp @ '0 @ '0)
+	END,		! | EOR |
+
+EORI() :=		! Exclusive Or Immediate.  Size = Byte,Word,Long.
+	BEGIN		! | EORI |	! '0000 101 0?? ??? ??? + Data Word(s) -- group 0, format 4.
+	Opr.Write(Size,mode.a,reg.a) =
+		Immediate(Size) XOR Opr.Fetch(Size,mode.a,reg.a)	NEXT
+	Test(Size,Opr.Write)						NEXT
+	SetCC(X @ Ntemp @ Ztemp @ '0 @ '0)
+	END,		! | EORI |
+
+EORI.to.CCR() :=	! Exclusive Or to Condition Codes. Size=Byte.
+			! (Size is encoded in the proper field, anyway)
+			! '0000 101 000 011 1100 -- group 0, format 5.
+	BEGIN		! | EORI.to.CCR |
+	Userbyte = Userbyte XOR Immediate(Size)
+	END,		! | EORI.to.CCR |
+
+EORI.to.SR() :=		! Exclusive Or To Status Register. (Privileged Instruction)
+			! Size = Long. (Size is encoded in instruction)
+			! '0000 101 001 111 100 -- group 0, format 5.
+	BEGIN		! | EORI.to.SR |
+	DECODE Smode =>
+		BEGIN
+		'0 := Privilege.Violation = 1,
+		'1 := SR = SR XOR Immediate(Size)
+		END
+	END,		! | EORI.to.SR |
+
+EXGA() :=		! Exchange Address Registers. Size=Long.
+	BEGIN		! | EXGA |	! '1100 ??? 101 001 ??? -- group 12, format 21.
+	temp32 = Areg.read(reg.a)					NEXT
+	Areg.write(reg.a) = Areg.read(reg.b)				NEXT
+	Areg.write(reg.b) = temp32
+	END,		! | EXGA |
+
+EXGD() :=		! Exchange Data Registers.  Size = Long.
+	BEGIN		! | EXGD |	! '1100 ??? 101 000 ??? -- group 12, format 21.
+	temp32 = Dreg[reg.a]						NEXT
+	Dreg[reg.a] = Dreg[reg.b]					NEXT
+	Dreg[reg.b] = temp32
+	END,		! | EXGD |
+
+EXGM() :=		! Exchange Data & Address Registers.  Size = Long.
+	BEGIN		! | EXGM |	! '1100 ??? 110 001 ??? -- group 12, format 21.
+	temp32 = Areg.read(reg.a)					NEXT
+	Areg.write(reg.a) = Dreg[reg.b]					NEXT
+	Dreg[reg.b] = temp32
+	END,		! | EXGM |
+
+EXT.W() :=		! Sign Extend.  Size = Word.
+	BEGIN		! | EXT.W |	! '0100 100 010 000 ??? -- group 4, format 7.
+	Dreg[reg.a]<15:0> <= Dreg[reg.a]<7:0>
+	END,		! | EXT.W |
+
+EXT.L() :=		! Sign Extend.  Size = Long.
+	BEGIN		! | EXT.L |	! '0100 100 011 000 ??? -- group 4, format 7.
+	Dreg[reg.a] <= Dreg[reg.a]<15:0>
+	END,		! | EXT.L |
+ILLEGAL() :=	! Illegal Instruction.  Unsized.
+			! '0100 101 011 111 100 -- group 4, format 5.
+	BEGIN		! | ILLEGAL |
+	No.Op()
+	END,		! | ILLEGAL |
+JMP() :=		! Jump.  Unsized.
+	BEGIN		! | JMP |	! '0100 111 011 ??? ??? -- group 4, format 2.
+			! turn prefetch off to save read cycles.
+	prefetch = '0							NEXT
+	PC = Addr.Calc(LongSize,mode.a,reg.a)				NEXT
+	NIR = Wread(PC)							NEXT
+	prefetch = '1
+	END,		! | JMP |
+
+JSR() :=		! Jump to Subroutine. Unsized.
+	BEGIN		! | JSR |	! '0100 111 010 ??? ??? -- group 4, format 2.
+	prefetch = '0							NEXT
+	Addr.Calc(LongSize,mode.a,reg.a)				NEXT
+	Lwrite(ARIM.L(SPnum)) = PC					NEXT
+	PC = Addr.Calc							NEXT
+	NIR = Wread(PC)							NEXT
+	prefetch = '1				! turn back on!
+	END,		! | JSR |
+LEA() :=		! Load Effective Address.  Size = Long.
+	BEGIN		! | LEA |	! '0100 ??? 111 ??? ??? -- group 4, format 1.
+			! The size should not be used in the address calculation.
+	Areg.Write(reg.b) = Addr.Calc(LongSize,mode.a,reg.a)
+	END,		! | LEA |
+
+LINK() :=		! Link and Allocate.  Unsized.
+	BEGIN		! | LINK |	! '0100 111 001 010 ??? + Data Word -- group 4, format 7.
+	LWrite(ARIM.L(SPnum)) = Areg.read(reg.a)			NEXT
+	Areg.write(reg.a) = Areg.read(SPnum)				NEXT
+	Areg.write(SPnum) = Areg.read(SPnum) + Immediate(WordSize)
+	END,		! | LINK |
+
+LSM() :=		! Logical Shift (Memory). Sized = Word.
+	BEGIN		! | LSM |	! '1110 001 ?11 ??? ??? -- group 14, format 24.
+	temp32 = Opr.Fetch(WordSize,mode.a,reg.a)			NEXT
+	LS(WordSize,Dir,1,temp32)					NEXT
+	Opr.Write(WordSize,mode.a,reg.a) = temp32;
+	SetCC(Ctemp @ Ntemp @ Ztemp @ '0 @ Ctemp)
+	END,		! | LSM |
+
+LSR() :=		! Logical Shift (Register). Sized=Byte,Word,Long.
+	BEGIN		! | LSLR |	! '1110 ??? ??? ?01 ??? -- group 14, format 22.
+	DECODE I.R =>
+		BEGIN
+		'0 := DECODE C.R =>	! count 
+			BEGIN
+			0 := temp8 = 8,
+			otherwise := temp8 = C.R
+			END,
+		'1 := temp8 = Dreg[reg.b]<5:0>	! reg 
+		END							NEXT
+	LS(Size,Dir,temp8,Dreg[reg.a])					NEXT
+	DECODE temp8 =>
+		BEGIN
+		'0 := SetCC(X @ Ntemp @ Ztemp @ '0 @ '0),
+		otherwise := SetCC(Ctemp @ Ntemp @ Ztemp @ '0 @ Ctemp)
+		END
+	END,		! | LSLR |
+MOVE() :=		! Move Data.  Size = Byte,Word,Long.
+	BEGIN		! | MOVE |	! '00?? ??? ??? ??? ??? -- move group, format 6.
+	DECODE Op.Set => ! remember, the address of the destination must be
+		BEGIN	! the last address calculated before Opr.Write
+			! is activated.
+		'0001 := BEGIN
+			 Opr.Fetch(ByteSize,mode.a,reg.a)		NEXT
+			 Addr.Calc(ByteSize,mode.b,reg.b)		NEXT
+			 Opr.Write(ByteSize,mode.b,reg.b) = Opr.Fetch	NEXT
+			 Test(ByteSize,Opr.Write)
+			 END,
+		'0011 := BEGIN
+			 Opr.Fetch(WordSize,mode.a,reg.a)		NEXT
+			 Addr.Calc(WordSize,mode.b,reg.b)		NEXT
+			 Opr.Write(WordSize,mode.b,reg.b) = Opr.Fetch	NEXT
+			 Test(WordSize,Opr.Write)
+			 END,
+		'0010 := BEGIN
+			 Opr.Fetch(LongSize,mode.a,reg.a)		NEXT
+			 Addr.Calc(LongSize,mode.b,reg.b)		NEXT
+			 Opr.Write(LongSize,mode.b,reg.b) = Opr.Fetch	NEXT
+			 Test(LongSize,Opr.Write)
+			 END
+		END							NEXT
+	SetCC(X @ Ntemp @ Ztemp @ '0 @ '0)
+	END,		! | MOVE |
+
+MOVE.to.CCR() :=	! Move to Condition Codes.  Size = Word.
+			! '0100 010 011 ??? ??? -- group 4, format 2.
+	BEGIN		! | MOVE.to.CRR |
+	Userbyte =
+		Opr.Fetch(WordSize,mode.a,reg.a)
+	END,		! | MOVE.to.CRR |
+
+MOVE.to.SR() :=		! Move to Status Register (Privileged Instruction). Size = Word.
+			! '0100 011 011 ??? ??? -- group 4, format 2.
+	BEGIN		! | MOVE.to.SR |
+	DECODE Smode =>
+		BEGIN
+		'0 := Privilege.Violation = 1,
+		'1 := BEGIN
+			SR = Opr.Fetch(WordSize,mode.a,reg.a)		NEXT
+			Test(WordSize,Opr.Fetch)			NEXT
+			SetCC(X @ Ntemp @ Ztemp @ '0 @ '0)
+		      END
+		END
+	END,		! | MOVE.to.SR |
+
+MOVE.from.SR() :=	! Move from Status Register.  Size = Word.
+			! '0100 000 011 ??? ??? -- group 4, format 2.
+	BEGIN		! | MOVE.from.SR |		! read before write
+	Opr.Fetch(WordSize,mode.a,reg.a)				NEXT
+	Opr.Write(WordSize,mode.a,reg.a) = SR
+	END,		! | MOVE.from.SR |
+
+MOVE.from.USP() :=	! Move from User Stack Pointer (Privileged Instruction). Size=Long.
+			! '0100 111 001 101 ??? -- group 4, format 7.
+	BEGIN		! | MOVE.from.USP |
+	DECODE Smode =>
+		BEGIN
+		'0 := Privilege.Violation = 1,
+		'1 := Areg.write(reg.a) = USP
+		END
+	END,		! | MOVE.from.USP |
+
+MOVE.to.USP() :=	! Move to User Stack Pointer (Privileged Instruction). Size=Long.
+			! '0100 111 001 100 ??? -- group 4, format 7.
+	BEGIN		! | MOVE.to.USP |
+	DECODE Smode =>
+		BEGIN
+		'0 := Privilege.Violation = 1,
+		'1 := USP = Areg.read(reg.a)
+		END
+	END,		! | MOVE.to.USP |
+
+MOVEA() :=		! Move to Address Register.  Size = Word,Long.
+	BEGIN		! | MOVEA |	! '00?? ??? 001 ??? ??? -- move group, format 23.
+	DECODE Op.Set =>
+		BEGIN
+		'0011 := Areg.write(reg.b) =
+				Opr.Fetch(WordSize,mode.a,reg.a),
+		'0010 := Areg.write(reg.b) =
+				Opr.Fetch(LongSize,mode.a,reg.a)
+		END
+	END,		! | MOVEA |
+
+MOVEM.RtoEA() :=	! Move Multiple Registers to Eff. Add. Size=Word,Long.
+			! '0100 100 01? ??? ??? + Register List Mask Word.
+			! group 4, format 8.
+	BEGIN		! | MOVEM.RtoEA |
+	Temp16 = Immediate(WordSize)					NEXT
+	IF mode.a NEQ PreDec =>
+		Addr.Calc(WordSize,mode.a,reg.a);
+	Temp8 = 0							NEXT
+loop := REPEAT
+		BEGIN		! | Loop |
+		IF Temp16<temp8> =>
+			BEGIN		! | If |
+			DECODE mode.a =>		! get the value.
+			  BEGIN
+			  PreDec := BEGIN
+				DECODE temp8<3> =>
+				  BEGIN
+				  '0 := temp32 = Areg.read(7 -{us} temp8<2:0>),
+				  '1 := temp32 = Dreg[7 -{us} temp8<2:0>]
+				  END					NEXT
+				Wwrite(Addr.Calc(WordSize,mode.a,reg.a)) =
+					Temp32<15:0>			NEXT
+				IF Sz EQL{us} '1 =>	!long
+				  Wwrite(Addr.Calc(WordSize,mode.a,reg.a)) =
+					temp32<31:16>
+				END,
+			  otherwise := BEGIN
+				DECODE temp8<3> =>
+				  BEGIN
+				  '0 := temp32 = Dreg[temp8<2:0>],
+				  '1 := temp32 = Areg.read(temp8<2:0>)
+				  END					NEXT
+				DECODE Sz =>
+				  BEGIN
+			  	  '0 := BEGIN	! word 
+					Wwrite(Addr.Calc) = Temp32<15:0> NEXT
+					Addr.Calc = Addr.Calc + 2
+					END,
+				  '1 := BEGIN	! long 
+					Lwrite(Addr.Calc) = Temp32	NEXT
+					Addr.Calc = Addr.Calc + 4
+					END
+				  END
+				END
+			  END
+			END	NEXT	! | If |			
+		IF Temp8 EQL 15 => LEAVE loop				NEXT
+		Temp8 = Temp8 + 1
+		END	! | Loop |
+	END,		! | MOVEM.RtoEA |
+
+MOVEM.EAtoR() :=	! Move Multiple Eff. Add to Registers. Size=Word,Long.
+			! '0100 110 01? ??? ??? + Register List Mask Word.
+			! group 4, format 8.
+	BEGIN		! | MOVEM.EAtoR |
+	Temp16 = Immediate(WordSize)					NEXT
+	Temp32 <= Opr.Fetch(WordSize,mode.a,reg.a);
+	Temp8 = 0							NEXT
+loop := REPEAT
+		BEGIN		! | Loop |
+		IF Temp16<temp8> =>
+			BEGIN		! | If |
+			Addr.Calc = Addr.Calc + 2			NEXT
+			IF Sz EQL{us} 1 =>
+			  BEGIN
+			  Temp32<31:16> = Temp32<15:0>			NEXT
+			  Temp32<15:0>  = Wread(Addr.Calc)		NEXT
+			  Addr.Calc = Addr.Calc + 2
+			  END						NEXT
+			DECODE Temp8<3> =>
+			  BEGIN
+			   '0 := Dreg[temp8<2:0>] = temp32,
+			   '1 := Areg.Write(temp8<2:0>) = temp32
+			   END						NEXT
+			Temp32 <= Wread(Addr.Calc)
+			END	NEXT	! | If |
+		IF Temp8 EQL 15 => LEAVE loop				NEXT
+		Temp8 = Temp8 + 1
+		END 	NEXT	! | Loop |	
+	IF mode.a EQL PostInc =>
+		Areg.write(reg.a) = Addr.Calc
+	END,		! | MOVEM.EAtoR |
+
+MOVEP() :=		! Move Peripheral Data.  Size = Word,Long.
+			! '0000 ??? 1?? 001 ??? + Displacement Word.
+	BEGIN		! | MOVEP |	! group 0, format 3.
+	DECODE Mode =>
+		BEGIN
+		'00 := BEGIN	! Word.to.reg 
+			Addr.Calc(ByteSize,IndirPlusDisp,reg.a)		NEXT
+			Dreg[reg.b]<15:8> = Bread(Addr.Calc)		NEXT
+			Addr.Calc = Addr.Calc + 2			NEXT
+			Dreg[reg.b]<7:0> = Bread(Addr.Calc)
+			END,
+		'01 := BEGIN	! Long.to.reg 
+			Addr.Calc(ByteSize,IndirPlusDisp,reg.a)		NEXT
+			Dreg[reg.b]<31:24> = Bread(Addr.Calc)		NEXT
+			Addr.Calc = Addr.Calc + 2			NEXT
+			Dreg[reg.b]<23:16> = Bread(Addr.Calc)		NEXT
+			Addr.Calc = Addr.Calc + 2			NEXT
+			Dreg[reg.b]<15:8> = Bread(Addr.Calc)		NEXT
+			Addr.Calc = Addr.Calc + 2			NEXT
+			Dreg[reg.b]<7:0> = Bread(Addr.Calc)
+			END,
+		'10 := BEGIN	! Word.to.mem 
+			BWrite(Addr.Calc(ByteSize,IndirPlusDisp,reg.a)) =
+				Dreg[reg.b]<15:8>			NEXT
+			Addr.Calc = Addr.Calc + 2			NEXT
+			BWrite(Addr.Calc)
+			END,
+		'11 := BEGIN	! Long.to.mem 
+			Bwrite(Addr.Calc(ByteSize,IndirPlusDisp,reg.a)) =
+				Dreg[reg.b]<31:24>			NEXT
+			Addr.Calc = Addr.Calc + 2			NEXT
+			Bwrite(Addr.Calc) = Dreg[reg.b]<23:16>		NEXT
+			Addr.Calc = Addr.Calc + 2			NEXT
+			Bwrite(Addr.Calc) = Dreg[reg.b]<15:8>		NEXT
+			Addr.Calc = Addr.Calc + 2			NEXT
+			Bwrite(Addr.Calc) = Dreg[reg.b]<7:0>
+			END
+		END
+	END,		! | MOVEP |
+
+MOVEQ() :=		! Move Quick.  Size = Long.
+	BEGIN		! | MOVEQ |	! '0111 ??? 0?? ??? ??? -- no group, format 15.
+	Dreg[reg.b] <= Value						NEXT
+	Test(LongSize,Dreg[reg.b])					NEXT
+	SetCC(X @ Ntemp @ Ztemp @ '0 @ '0)
+	END,		! | MOVEQ |
+
+MULS() :=		! Signed Multiply.  Size = Word.
+	BEGIN		! | MULS |	! '1100 ??? 111 ??? ??? -- group 12, format 1.
+	temp16 = Opr.Fetch(WordSize,mode.a,reg.a)			NEXT
+	Dreg[reg.b] = temp16 * Dreg[reg.b]<15:0>			NEXT
+	Test(LongSize,Dreg[reg.b])					NEXT
+	SetCC(X @ Ntemp @ Ztemp @ '0 @ '0)
+	END,		! | MULS |
+
+MULU() :=		! Unsigned Multiply.  Size = Word.
+	BEGIN		! | MULU |	! '1100 ??? 011 ??? ??? -- group 12, format 1.
+	temp16 = Opr.Fetch(WordSize,mode.a,reg.a)			NEXT
+	Dreg[reg.b] = temp16 *{us} Dreg[reg.b]<15:0>			NEXT
+	Test(LongSize,Dreg[reg.b])					NEXT
+	SetCC(X @ Ntemp @ Ztemp @ '0 @ '0)
+	END,		! | MULU |
+NBCD() :=		! Negate Decimal with Extend.  Size = Byte.
+	BEGIN		! | NBCD |	! '0100 100 000 ??? ??? -- group 4, format 2.
+	Opr.Write(Size,mode.a,reg.a) =
+		BCD.Diff(Opr.Fetch(Size,mode.a,reg.a),0,X)		NEXT
+	SetCC(Ctemp @ Ntemp @ (Z AND Ztemp) @ Vtemp @ Ctemp)
+	END,		! | NBCD |
+
+NEG() :=		! Negate Binary.  Size = Byte,Word,Long.
+	BEGIN		! | NEG |	! '0100 010 0?? ??? ??? -- group 4, format 4.
+	Opr.Write(Size,mode.a,reg.a) =
+		Diff(Size,Opr.Fetch(Size,mode.a,reg.a),0,0)		NEXT
+	Test(Size,Opr.Write)						NEXT
+	SetCC(Ctemp @ Ntemp @ Ztemp @ Vtemp @ Ctemp)
+	END,		! | NEG |
+
+NEGX() :=		! Negate with Extend.  Size = Byte,Word,Long.
+	BEGIN		! | NEGX |	! '0100 000 0?? ??? ??? -- group 4, format 4.
+	Opr.Write(Size,mode.a,reg.a) =
+		Diff(Size,Opr.Fetch(Size,mode.a,reg.a),0,X)		NEXT
+	Test(Size,Opr.Write)						NEXT
+	SetCC(Ctemp @ Ntemp @ (Z AND Ztemp) @ Vtemp @ Ctemp)
+	END,		! | NEGX |
+
+NOP() :=		! No Operation.  Unsized.
+	BEGIN		! | NOP |	! '0100 111 001 110 001 -- group 4, format 5.
+	No.Op()
+	END,		! | NOP |
+
+NOT.() :=		! Logical Complement.  Size = Byte,Word,Long.
+	BEGIN		! | NOT. |	! '0100 011 0?? ??? ??? -- group 4, format 5.
+	Opr.Write(Size,mode.a,reg.a) = NOT Opr.Fetch(Size,mode.a,reg.a)	NEXT
+	Test(Size,Opr.Write)						NEXT
+	SetCC(X @ Ntemp @ Ztemp @ '0 @ '0)
+	END,		! | NOT. |
+OR.() :=		! Inclusive Or Logical.  Size = Byte,Word,Long.
+	BEGIN		! | OR. |	! '1000 ??? ??? ??? ??? -- group 8, format 16.
+	DECODE Dir =>
+		BEGIN
+		'0 := Opr.Write(Size,DataRegDir,reg.b) =	! ToReg 
+			Dreg[reg.b] OR Opr.Fetch(Size,mode.a,reg.a),
+		'1 := Opr.Write(Size,mode.a,reg.a) =	! ToEadd 
+			Opr.Fetch(Size,mode.a,reg.a) OR Dreg[reg.b]
+		END							NEXT
+	Test(Size,Opr.Write)						NEXT
+	SetCC(X @ Ntemp @ Ztemp @ '0 @ '0)
+	END,		! | OR. |
+
+ORI() :=		! Inclusive Or Immediate.  Size = Byte,Word,Long.
+	BEGIN		! | ORI |	! '0000 000 0?? ??? ??? + Data Word(s) -- group 0, format 4.
+	Opr.Write(Size,mode.a,reg.a) =
+		Immediate(Size) OR Opr.Fetch(Size,mode.a,reg.a)		NEXT
+	Test(Size,Opr.Write)						NEXT
+	SetCC(X @ Ntemp @ Ztemp @ '0 @ '0)
+	END,		! | ORI |
+
+ORI.to.CCR() :=		! Inclusive Or Immediate to Condition Codes. Size=Byte.
+			! (Size is encoded in instruction)
+			! '0000 000 000 111 100 + Data Word -- group 0, format 5.
+	BEGIN		! | ORI.to.CCR |
+	Userbyte = Userbyte OR Immediate(Size)
+	END,		! | ORI.to.CCR |
+
+ORI.to.SR() :=		! Inclusive Or Immediate to Status Register (Privileged Instruction).
+			! Size=Word. (Size is encoded in instruction)
+			! '0000 000 001 111 100 + Data Word -- group 0, format 5.
+	BEGIN		! | ORI.to.SR |
+	DECODE Smode =>
+		BEGIN
+		'0 := Privilege.Violation = 1,
+		'1 := SR = SR OR Immediate(Size)
+		END
+	END,		! | ORI.to.SR |
+PEA() :=		! Push Effective Address.  Size = Long.
+	BEGIN		! | PEA |	! '0100 100 001 ??? ??? + Data Word -- group 4, format 2.
+	LWrite(ARIM.L(SPnum)) = Addr.Calc(LongSize,mode.a,reg.a)
+	END,		! | PEA |
+RESET() :=		! Reset External Devices (Privileged Instruction). Unsized.
+	BEGIN		! | RESET |	! '0100 111 001 110 000 -- group 4, format 5.
+	No.Op()
+	END,		! | RESET |
+
+ROM() :=		! Rotate (without Extend, Memory). Size=Word.
+	BEGIN		! | ROM |	! '1110 011 ?11 ??? ??? -- group 14, format 24.
+	temp32 = Opr.Fetch(WordSize,mode.a,reg.a)			NEXT
+	RO(WordSize,Dir,1,temp32)					NEXT
+	Opr.Write(WordSize,mode.a,reg.a) = temp32;
+	SetCC(Ctemp @ Ntemp @ Ztemp @ '0 @ Ctemp)
+	END,		! | ROM |
+
+ROR() :=		! Rotate (without Extend, Register). Size=Byte,Word,Long.
+	BEGIN		! | ROR |	! '1110 ??? ??? ?11 ??? -- group 14, format 22.
+	DECODE I.R =>
+		BEGIN
+		'0 := DECODE C.R =>	! count 
+			BEGIN
+			0 := temp8 = 8,
+			otherwise := temp8 = C.R
+			END,
+		'1 := temp8 = Dreg[reg.b]<5:0>	! reg 
+		END							NEXT
+	RO(Size,Dir,temp8,Dreg[reg.a])					NEXT
+	DECODE temp8 =>
+		BEGIN
+		'0 := SetCC(X @ Ntemp @ Ztemp @ '0 @ '0),
+		otherwise := SetCC(X @ Ntemp @ Ztemp @ '0 @ Ctemp)
+		END
+	END,		! | ROR |
+
+ROXM() :=		! Rotate with Extend (Memory). Size=Word.
+	BEGIN		! | ROXM |	! '1110 010 ?11 ??? ??? -- group 14, format 24.
+	temp32 = Opr.Fetch(WordSize,mode.a,reg.a)			NEXT
+	RE(WordSize,Dir,1,temp32)					NEXT
+	Opr.Write(WordSize,mode.a,reg.a) = temp32;
+	SetCC(X @ Ntemp @ Ztemp @ '0 @ Ctemp)
+	END,		! | ROXM |
+
+ROXR() :=		! Rotate with Extend (Register). Size=Byte,Word,Long.
+	BEGIN		! | ROXR |	! '1110 ??? ??? ?10 ??? -- group 14, format 22.
+	DECODE I.R =>
+		BEGIN
+		'0 := DECODE C.R =>	! count 
+			BEGIN
+			0 := temp8 = 8,
+			otherwise := temp8 = C.R
+			END,
+		'1 := temp8 = Dreg[reg.b]<5:0>	! reg 
+		END							NEXT
+	RE(Size,Dir,temp8,Dreg[reg.a])					NEXT
+	SetCC(X @ Ntemp @ Ztemp @ '0 @ Ctemp)
+	END,		! | ROXR |
+
+RTE() :=		! Return from Exception (Privileged Instruction). Unsized.
+	BEGIN		! | RTE |	! '0100 111 001 110 011 -- group 4, format 5.
+	DECODE Smode =>
+		BEGIN
+		'0 := Privilege.Violation = '1,
+		'1 := BEGIN
+			SR = Opr.Fetch(WordSize,PostInc,SPnum)		NEXT
+			PC = Opr.Fetch(LongSize,PostInc,SPnum)		NEXT
+			NIR = Wread(PC)		! refill pipeline
+		      END
+		END
+	END,		! | RTE |
+
+RTR() :=		! Return and Restore Condition Codes. Unsized.
+	BEGIN		! | RTR |	! '0100 111 001 110 111 -- group 4, format 5.
+	UserByte = Opr.Fetch(ByteSize,PostInc,SPnum)			NEXT
+	PC = Opr.Fetch(LongSize,PostInc,SPnum)				NEXT
+	NIR = Wread(PC)				! refill pipeline
+	END,		! | RTR |
+
+RTS() :=		! Return from Subroutine.  Unsized.
+	BEGIN		! | RTS |	! '0100 111 001 110 101 -- group 4, format 5.
+	PC = Opr.Fetch(LongSize,PostInc,SPnum)				NEXT
+	NIR = Wread(PC)				! refill pipeline
+	END,		! | RTS |
+SBCD() :=		! Subtract Decimal with Extend. Size = Byte.
+	BEGIN		! | SBCD |	! '1000 ??? 100 00? ??? -- group 8, format 17.
+	DECODE R.M =>
+		BEGIN
+		'0 := Dreg[reg.b] =
+			BCD.Diff(Dreg[reg.a],Dreg[reg.b],X),
+		'1 := Opr.Write(Size,PreDec,reg.b) =
+			BCD.Diff(Opr.Fetch(Size,PreDec,reg.a),
+				 Opr.Fetch(Size,PreDec,reg.b),
+				 X)
+		END							NEXT
+	SetCC(Ctemp @ Ntemp @ (Z AND Ztemp) @ Vtemp @ Ctemp)
+	END,		! | SBCD |
+
+Scc() :=		! Set According to Condition. Size = Byte.
+	BEGIN		! | Scc |	! '0101 ??? ?11 ??? ??? -- group 5, format 11.
+	Opr.Fetch(Size,mode.a,reg.a)					NEXT
+	DECODE CC(Cond) =>
+		BEGIN
+		FALSE := Opr.Write(ByteSize,mode.a,reg.a) = "00,
+		TRUE  := Opr.Write(ByteSize,mode.a,reg.a) = "FF
+		END
+	END,		! | Scc |
+
+STOP.() :=		! Load Status Register and Stop (Privileged Instruction).
+			! Unsized.
+	BEGIN		! | STOP. |	! '0100 111 001 110 010 + Data Word -- group 4, format 5.
+	DECODE Smode =>
+		BEGIN
+		'0 := Privilege.Violation = 1,
+		'1 := BEGIN
+			SR = Immediate(Wordsize)			NEXT
+			Stop()
+		      END
+		END
+	END,		! | STOP. |
+
+SUB() :=		! Subtract Binary.  Size = Byte,Word,Long.
+	BEGIN		! | SUB |	! '1001 ??? ??? ??? ??? -- group 9, format 16.
+	DECODE Dir =>
+		BEGIN
+		'0 := Dreg[reg.b] =	! ToReg 
+				Diff(Size,Opr.Fetch(Size,mode.a,reg.a),
+					  Dreg[reg.b],0),
+		'1 := Opr.Write(Size,mode.a,reg.a) =	! ToEA  
+				Diff(Size,Dreg[reg.b],
+					  Opr.Fetch(Size,mode.a,reg.a),0)
+		END							NEXT
+	SetCC(Ctemp @ Ntemp @ Ztemp @ Vtemp @ Ctemp)
+	END,		! | SUB |
+
+SUBA() :=		! Subtract Address.  Size = Word,Long.
+	BEGIN		! | SUBA |	! '1001 ??? ?11 ??? ??? -- group 9, format 23.
+	DECODE Op.Mode =>
+		BEGIN
+		'011 := Areg.Write(reg.b) =	! Word 
+			Diff(LongSize,Opr.Fetch(WordSize,mode.a,reg.a),
+				      Areg.read(reg.b),0),
+		'111 := Areg.Write(reg.b) =	! Long 
+			Diff(LongSize,Opr.Fetch(LongSize,mode.a,reg.a),
+				      Areg.read(reg.b),0)
+		END
+	END,		! | SUBA |
+
+SUBI() :=		! Subtract Immediate.  Size = Byte,Word,Long.
+	BEGIN		! | SUBI |	! '0000 010 0?? ??? ??? + Data Word(s) -- group 0, format 4.
+	Opr.Write(Size,mode.a,reg.a) =
+	     Diff(Size,Immediate(Size),Opr.Fetch(Size,mode.a,reg.a),0)	NEXT
+	SetCC(Ctemp @ Ntemp @ Ztemp @ Vtemp @ Ctemp)
+	END,		! | SUBI |
+
+SUBQ() :=		! Subtract Quick.  Size = Byte,Word,Long.
+	BEGIN		! | SUBQ |	! '0101 ??? 1?? ??? ??? -- group 5, format 10.
+	DECODE Data =>	! (Address Regs not allowed for Byte size)
+		BEGIN
+		'000 := temp32 = 8,
+		otherwise := temp32 = Data
+		END							NEXT
+	Opr.Write(Size,mode.a,reg.a) =
+		Diff(Size,temp32,Opr.Fetch(Size,mode.a,reg.a),0)	NEXT
+	IF mode.a NEQ '001 =>		! Not an address register.
+		SetCC(Ctemp @ Ntemp @ Ztemp @ Vtemp @ Ctemp)
+	END,		! | SUBQ |
+
+SUBX() :=		! Subtract Binary Extended.  Size = Byte,Word,Long.
+	BEGIN		! | SUBX |	! '1001 ??? 1?? 00? ??? -- group 9, format 18.
+	DECODE R.M =>
+		BEGIN
+		'0 := Opr.Write(Size,DataRegDir,reg.b) =	! Register 
+			Diff(Size,Opr.Fetch(Size,DataRegDir,reg.a),
+				  Opr.Fetch(Size,DataRegDir,reg.b),X),
+		'1 := Opr.Write(Size,PreDec,reg.b) =	! Memory   
+			Diff(Size,Opr.Fetch(Size,PreDec,reg.a),
+				  Opr.Fetch(Size,PreDec,reg.b),X)
+		END	NEXT
+	SetCC(Ctemp @ Ntemp @ (Z AND Ztemp) @ Vtemp @ Ctemp)
+	END,		! | SUBX |
+
+SWAP() :=		! Swap Register Halves. Size = Word.
+	BEGIN		! | SWAP |	! '0100 100 001 000 ??? -- group 4, format 7.
+	temp16 = Dreg[reg.a]<15:0>					NEXT
+	Dreg[reg.a]<15:0> = Dreg[reg.a]<31:16>				NEXT
+	Dreg[reg.a]<31:16> = temp16					NEXT
+	Test(LongSize,Dreg[reg.a])					NEXT
+	SetCC(X @ Ntemp @ Ztemp @ '0 @ '0 )
+	END,		! | SWAP |
+TAS() :=		! Indivisible Test and Set. Size = Byte.
+	BEGIN		! | TAS |	! '0100 101 011 ??? ??? -- group 4, format 2.
+			! Note: the indivisibility is not modelled.
+	temp8 = Opr.Fetch(ByteSize,mode.a,reg.a)			NEXT
+	Test(ByteSize,temp8);
+	Opr.Write(ByteSize,mode.a,reg.a) = '1 @ temp8<6:0>		NEXT
+	SetCC(X @ Ntemp @ Ztemp @ '0 @ '0)
+	END,		! | TAS |
+
+TRAP() :=		! Trap.	 Unsized.
+	BEGIN		! | TRAP |	! '0100 111 001 00? ??? -- group 4, format 9.
+	No.Op()
+	END,		! | TRAP |
+TRAPV() :=		! Trap on Overflow.  Unsized.
+	BEGIN		! | TRAPV |	! '0100 111 001 110 110 -- group 4, format 5.
+	No.Op()
+	END,		! | TRAPV |
+
+TST.() :=		! Test an Operand.  Size = Byte,Word,Long.
+	BEGIN		! | TST. |	! '0100 101 0?? ??? ??? -- group 4, format 4.
+	Test(Size,Opr.Fetch(Size,mode.a,reg.a))				NEXT
+	SetCC(X @ Ntemp @ Ztemp @ '0 @ '0)
+	END,		! | TST. |
+UNLK() :=		! Unlink.  Unsized.
+	BEGIN		! | UNLK |	! '0100 111 001 011 ??? -- group 4, format 7.
+	Areg.write(SPnum) = Areg.read(reg.a)				NEXT
+	Areg.write(reg.a) = Lread(ARIP.L(SPnum))
+	END		! | UNLK |
+
+	END	! | isp |
+
+
+

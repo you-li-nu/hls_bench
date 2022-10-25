@@ -1,0 +1,80 @@
+		High Level Synthesis Benchmarks
+
+This set of benchmarks was prepared for the Fourth International 
+Workshop on High-Level Synthesis, co-sponsored by ACM/SIGDA and IEEE/DATC
+with the cooperation of IEEE/CANDE and IFIP/WG10.2,and held October 15-18, 
+1989, in Kennebunkport, Maine, USA.  The benchmarks were collected by 
+Bruce Irwin and Bob Mayo (mayo@decwrl.dec.com) of the University of Wisconsin.
+
+
+		How To Obtain Benchmark Data
+
+The High Level Synthesis benchmark data can be obtained from MCNC in one
+of two ways: by FTP over ARPA Net or by 9-track tape.
+
+1.0 ARPA Net FTP
+
+If you have access to an ARPA Net connection you may establish an FTP
+connection to host "mcnc.mcnc.org" and copy the files using the
+"get" command.  The login name is "anonymous" and the password is 
+any string (we ask that you use your name or home login id).
+The files are in the "/pub/benchmark/HLSynth89" directory.  
+
+The command sequence to establish a connection to the host machine is:
+
+	ftp mcnc.mcnc.org
+	anonymous 	(in response to the "Name" prompt)
+	(your id) 	(in response to the "password" prompt)
+
+
+If you have a UNIX(tm) machine on the Arpanet,
+check to see if you have the ``uncompress'' command
+available. Shipping the benchmarks over in compressed
+form is much faster than in plaintext. If you have
+uncompress, then do
+
+	cd pub/benchmark/HLSynth89
+	binary
+	get HLSynth89.tar.Z
+	bye
+
+on your local machine, uncompress the file with the command
+
+	uncompress HLSynth89.tar.Z
+
+un-tar the file with the command
+
+	tar -xvf HLSynth89.tar
+
+If you do not have the uncompress utility, but do have
+the ``tar'' facility then take the uncompressed version, as in
+
+	cd pub/benchmark/HLSynth89
+	get HLSynth89.tar
+	bye
+
+and then on your local machine
+
+	tar -xvf HLSynth89.tar
+
+
+If you do not have the ``tar'' utility available, you may have
+to copy the files explicitly. 
+
+	cd pub/benchmark/HLSynth89
+	get HLSynth89.readme
+	get HLSynth89.list
+	cd DATA
+	mget *
+	cd DOCUMENTATION
+	mget *
+	bye
+
+
+2.0 9-Track Tape, SUN-type workstation cartridge, DEC station cartridge.
+
+We are prepared to send you a 9-track tape in TAR format.
+Contact benchmarks@mcnc.org for details.
+ACM SIGDA is providing funds to cover the cost of tapes and shipping,
+so there is no cost to you for this service.
+

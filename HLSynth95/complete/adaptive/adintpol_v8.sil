@@ -1,0 +1,819 @@
+/*#################################################################*/  
+
+/*
+Ref : Adaptive interpolation algorithm for digital audio signals 
+      Nat. Lab. report nr. 5863
+      R.N.J. Veldhuis and A.J.E.M. Janssen
+
+Author : Koen Van Nieuwenhove
+
+Modification history : 
+--------------------
+   1.008 19/02/91
+   1.007 12/02/91 Changed the size of the accumulator used in the
+		  autocorrelation calculation to 22. Changed the size
+		  of k[] in the Durbin alghorithm to INT_WM.
+   1.006 11/02/91 The input samples are scaled to maximum precision
+		  before the autocorrelation calculation starts. The
+		  scalings in the autocorrelation calculation can then
+		  be replaced by a ROUTE statement.
+		  The scaled samples are then immediately used in the
+		  syndrome calculation and in outputResults the 
+		  data samples are scaled back to their original values.
+   1.005 11/02/91 The autocorrelation calculation is replaced by
+		  an iterative calculation, requiring an extra fifo
+		  of 51 words * 22 bits, but resulting in a much 
+		  higher speed. The number of cycles is reduced by  
+		  23600 to 90000. This leaves 26000 cycles that can
+		  be used to execute multiplications in multiple 
+		  precision.
+   1.004 11/02/91 Calculation of the number of bits in the input
+		  signal while zeroing the error samples.
+   1.003 11/02/91 Simplification of the inner loop of the Durbin
+		  algorithm. Calculation of alpha as described in 
+		  'Toeplitz matrices, applications and architecture'
+		  by I. Verbauwhede.
+   1.002 07/02/91 All operations that used round before are replaced
+		  by truncations, except in the inner loop of the
+		  Durbin algorithm.
+   1.001 06/02/91 Final version of bittrue silage.
+		  Verified using the Fortran reference program
+		  described in Nat.Lab. report nr. 5863 and the
+		  test examples on the ~adintpol/example1 to
+		  ~vnieuwen/example5 directories.
+   1.000 14/12/90
+
+-- Verification Information:
+--
+--                  Verified     By whom?           Date         Simulator
+--                  --------   ------------        --------     ------------
+--  Syntax            ?	             ?                 ?            ?
+--  Functionality     ?              ?                 ?            ?
+
+*/
+
+/*#################################################################*/  
+
+#define N               512       /* number of samples in frame 
+		                     recommended : 32 * M       */
+#define Nmin1           511
+#define Nmin1plusPMAX   561
+#define NplusPMAX       562
+#define bitsN           10        /* 2**10 = 512                */
+#define M               16        /* maximum number of errors 
+			             can occur in a frame       */
+#define Mmin1           15
+#define NONE            0         /* value indicating an invalid
+			             error position             */
+#define WM              16        /* width of the multiplier    */
+#define WMmin1          15
+#define WMminV          10
+#define WA              32        /* width of the accumulator   */
+#define WAminWM         16
+#define V               6         /* number of bits used to 
+			             calculate the autocorrelation 
+			             function                   */
+#define Vmin1           5
+#define bitsINT_S       16        /* number of bits in the 
+			             input samples              */
+#define bitsINT_WM      WM
+#define bitsINT_WM1     WM+1
+#define bitsINT_2WM     2*bitsINT_WM
+#define bitsINT_AC      bitsINT_S+V
+#define PMAX            50        /* maximum order of AR signal */
+#define PMAXplus1       51
+#define bitsPMAX        6         /* number of bits in PMAX     */
+
+
+#define INT_S     fix<bitsINT_S,0>
+#define INT_WM    fix<bitsINT_WM,0>
+#define INT_WM1   fix<bitsINT_WM1,0>
+#define INT_2WM   fix<bitsINT_2WM,0>
+#define INT_AC    fix<bitsINT_AC,0>
+#define INT_T     fix<10,0> 
+#define INT_M     fix<M,0>
+#define INT_6     fix<6,0>
+#define INT_7     fix<7,0>
+#define INT_V     fix<V,0> 
+
+#define MAXM      INT_WM ( 0111111111111111B )
+
+
+/*#################################################################*/  
+
+func main 
+     ( s : INT_S[N] ;  /* N input samples */
+       t : INT_T[M] ;  /* M error positions */
+       m : INT_6       /* number of missing samples */
+     ) : INT_S[] =     /* N interpolated output samples */
+  begin 
+  /* 
+  - zero all input samples where an error occurs
+  - determine the number of bits in the input signal
+  */
+  ( sbits , sa[] ) = zeroErrorSamples ( s[] , t[] );
+
+  /*
+  extend the input sample array with 50 zeroes ( required for the 
+  autocorrelation )
+  */
+  ( i : 0 .. Nmin1 ) :: s0[i] = sa[i];
+  ( i : N .. Nmin1plusPMAX ) :: s0[i] = INT_S(0);
+
+  /*
+  determine the number of bits to be shifted out
+  */
+  qbits = sbits - Vmin1;
+  iscl0 = sbits - WMmin1;
+
+  /*
+  - shift the input samples to maximum precision
+  */
+  (i : 0 .. Nmin1plusPMAX ) :: 
+    s1[i]=minINT_S ( MAXM , shiftINT_S ( s0[i] , -iscl0 ) );
+
+  /*
+  compute autocorrelation coefficients
+  ------------------------------------
+  - memory requirements : array 51*22 bits to store autocorrelation
+  */
+  r0[] = computeAutocorrelationCoefficients ( s1[] );
+
+  /*
+  compute prediction coefficients
+  -------------------------------
+  requires the solution of a Toeplitz matrix, the right hand side
+  vector is composed of the matrix elements. This is called a Yule-Walker
+  system. It is solved using the Durbin algorithm. Complexity : O(n2).
+
+  - memory requirements : array 51*16 to store alpha ( could use the same 
+  			    array as the autocorrelation coefficients )
+			  array 51*17 to store alpha0 
+  */
+  ( alpha[] , nscl ) = intDurbin ( r0[] );
+
+  /*
+  compute lambdas
+  ---------------
+  - memory requirements : array 51*16 to store lambda ( could use the same
+			  array as alpha0 )
+  */ 
+  lambda0[] = computeLambda ( alpha[] , nscl );
+  
+  /*
+  compute the syndrome 
+  --------------------
+  - memory requirements : array 16*32 to store syndrome vector
+  */
+  iscls = iscl0;
+  syn[] = computeSyndrome ( s1[] , t[] , lambda0[] ); 
+
+  /*
+  solve missing samples
+  ---------------------
+  requires the solution of a Toeplitz matrix of which the right hand side
+  is not composed of the matrix elements. This could be solved using the
+  Levinson-Durbin algorithm of complexity : O(n2). Instead Gauss elimination
+  of complexity O(n3) is used.
+  - memory requirements : array (16*16)*16 to store central matrix
+			  array 16*16 to store result
+  */
+  ( y[] , iscl1 ) = solveSamples ( lambda0[] , t[] , syn[] );
+  iscl2 = iscl0 + iscl1;
+  
+  /* 
+  output results
+  --------------
+  */ 
+  return[] = outputResults ( s1[] , y[] , t[] , iscl2 , m , iscl0 );
+  
+  end; 
+
+/*#################################################################*/  
+
+func outputResults
+     ( s : INT_S[NplusPMAX] ;  /* N input samples with all errors 
+	                  present */
+       y : INT_S[M] ;  /* corrected values */
+       t : INT_T[M] ;
+       iscl2 : INT_7 ;
+       m : INT_6;
+       iscl0 : INT_7
+     ) outv : INT_S[] = 
+  begin
+  /* 
+  scale result
+  */ 
+  (i : 0 .. Mmin1 ) ::
+    begin
+    y0[i] = shiftINT_S ( y[i] ,  iscl2 );
+    end;
+
+  ptr[0]  = INT_6(0);
+  outv[0] = shiftINT_S ( s[0] , iscl0 );
+  (i:1.. Nmin1) ::
+    begin 
+    sig1[i] = INT_T ( lookup ( t[] , ptr[i-1] ) );
+    outv[i] = if ( sig1[i] == INT_T(i) ) ->  lookup ( y0[] , ptr[i-1] )
+	      ||                             shiftINT_S ( s[i] , iscl0 )
+	      fi;
+    ptr[i]  = if ( ( sig1[i] == INT_T(i) ) & 
+		   ( ptr[i-1] < INT_6(m-1) ) ) -> 
+		ptr[i-1] + INT_6(1)
+	      ||                                     
+		ptr[i-1]
+	      fi;
+    end; 
+  end;
+
+/*#################################################################*/  
+
+func zeroErrorSamples 
+     ( s : INT_S[N] ;  /* N input samples with all errors 
+	                  present */
+       t : INT_T[M]    /* error positions , valid positions 
+                          differ from NONE, it is assumed
+		          that all error positions are grouped
+		          in the lower positions of the array
+                          and that they are ordered in 
+		          rising order of positions, at least 
+		          one error position must occur */
+      ) sbits : INT_7 ;
+	return : INT_S[] = /* input frame, with the error 
+                          samples set to INT_S(0) */
+  begin
+  /* 
+  create an array of booleans that indicate for each position whether
+  an error occurs
+  */
+  ptr[0]  = INT_6(0);
+  errp[0] = bool(0);
+  (i:1.. Nmin1) ::
+    begin 
+    sig1[i] = INT_T ( lookup ( t[] , ptr[i-1] ) );
+    errp[i] = if ( sig1[i] == INT_T(i) ) -> bool(1)
+	      ||                            bool(0)
+	      fi;
+    ptr[i]  = if ( errp[i] & ( ptr[i-1] < Mmin1 ) ) -> ptr[i-1] + INT_6(1)
+	      ||                                     ptr[i-1]
+	      fi;
+    end; 
+  /*
+  return input frame with the error samples set to INT_S(0)
+  */
+  mask[0] = INT_S(0);
+  (j:0 .. Nmin1) ::
+    begin
+    ( return[j] , mask[j+1] ) =
+      if ( errp[j] ) ->  ( INT_S(0) , mask[j] )
+      ||                 ( s[j] , mask[j] | INT_S ( abs ( s[j] ) ) )
+      fi;
+    end;
+  sbits = bitsInINT_S ( mask[N] );
+  end;
+
+
+/*#################################################################*/  
+
+func computeAutocorrelationCoefficients 
+     ( s : INT_S[NplusPMAX]        /* input frame */
+     ) : INT_WM[] =         /* autocorrelation coefficients */
+  begin
+  (i : 0 .. PMAX ) :: r[i][0] = INT_AC(0);	
+  (j : 0 .. Nmin1 ) ::
+    begin
+    a[j] = route ( s[j] );
+    (i : 0 .. PMAX ) ::
+      begin
+      b[i][j] = route ( s[i+j] );
+      r[i][j+1] = r[i][j] + INT_AC ( a[j] * b[i][j] );
+      end;
+    end;
+  iscl0 = bitsInINT_AC ( r[0][N] ) - WMmin1;
+  help = INT_WM ( shiftINT_AC ( r[0][N] , -iscl0 ) );
+  return[0] = minINT_WM ( MAXM , help );
+  (i: 1 .. PMAX) ::
+    begin
+    return[i] = INT_WM ( shiftINT_AC ( r[i][N] , -iscl0 ) );
+    end;
+  end;
+
+/*#################################################################*/  
+
+func intDurbin
+     ( r : INT_WM[PMAXplus1]     /* autocorrelation coefficients */
+     ) alpha_ret : INT_WM1[];  /* prediction coefficients */
+       iscl_ret : INT_7 =     /* number of bits that the
+			         prediction coefficients 
+			         should be shifted to the
+			         left */
+  begin
+  one      = ( INT_2WM (   1 ) << ( WMmin1 ) );
+  onesq    = ( INT_2WM ( one ) << ( WMmin1 ) );
+  iscl[0]  = INT_7(0);
+  sigma[0] = r[0];
+
+  (i : 1.. PMAX ) ::
+    begin
+    /*
+    compute the reflection coefficient :
+      computed with 32 bits although in principle 38 bits are
+      required
+    */
+    accu[i][0] = shiftINT_2WM ( INT_2WM ( r[i] ) , 
+				INT_7 ( WMmin1 ) - iscl[i-1]
+			      );
+    (j : 1..( i - 1) ) ::
+      begin
+      accu[i][j] = accu[i][j-1] + INT_2WM ( alpha[i-1][j] * r[i-j] );
+      end;
+    k[i] = - INT_WM ( shiftINT_2WM ( accu[i][i-1] , iscl[i-1] ) / 
+		      sigma[i-1] 
+		    );
+
+    /*
+    compute prediction coefficients
+    */
+    alpha0[i][i] = INT_WM1 ( shiftINT_WM ( k[i] , -iscl[i-1] ) );
+    mask[i][0] = INT_WM1 ( abs ( alpha0[i][i] ) );
+
+    (j : 1 .. i-1 ) ::
+      begin
+      alpha0[i][j] = 
+	INT_WM1 ( alpha[i-1][j] ) + 
+	INT_WM1 ( ROUNDINT_2WM ( INT_2WM ( k[i] * alpha[i-1][i-j] ), WMmin1 )
+	);
+      mask[i][j] = mask[i][j-1] | abs ( alpha0[i][j] );
+      end;
+
+    /*
+    determine maximum number of bits
+    */
+    mbits[i] = bitsInINT_WM1 ( mask[i][i-1] );
+    ( iscl[i] , shift[i] ) = 
+      if ( mbits[i] > WMmin1 ) -> ( iscl[i-1]+1 , INT_7(1) )
+      ||                        ( iscl[i-1]   , INT_7(0) ) 
+      fi;
+
+    /*
+    scale coefficients
+    */
+    (j : 1..i) ::
+      begin
+      alpha[i][j] = shiftINT_WM1 ( alpha0[i][j] , -shift[i] );
+      end;
+
+    /*
+    compute prediction error in maximum precision
+    */
+    fac[i] = onesq - INT_2WM ( k[i]*k[i] );
+    ibs[i] = if ( 0 < ( -WAminWM + bitsInINT_2WM ( fac[i] ) ) ) ->
+	       -WAminWM+bitsInINT_2WM ( fac[i] )
+             ||
+	       INT_7 (0)
+             fi;
+    sigma[i] = INT_WM 
+		 (
+		 shiftINT_2WM (
+			      INT_2WM
+				(
+			        shiftINT_2WM ( fac[i] , -ibs[i] ) * sigma[i-1]
+				),
+                              -(INT_7 (2*(WMmin1)) - ibs[i]) 
+		       	      )
+                 );
+    end;
+
+  alpha_ret[0] = INT_WM1 ( shiftINT_2WM ( one , -iscl[PMAX] ) );
+
+  (j : 1 .. PMAX) ::
+    begin
+    alpha_ret[j] = alpha[PMAX][j] ;
+    end;
+  iscl_ret = iscl[PMAX];
+  end;
+
+/*#################################################################*/  
+
+func computeLambda 
+     ( alpha : INT_WM1[PMAXplus1];
+       iscl : INT_7
+     ) : INT_WM[] = 
+  begin
+    isclx[0] = 0;
+    (i : 0 .. PMAX) ::
+    begin
+    accu[i][0] = 0;
+    (j : 0.. PMAX-i) ::
+      begin
+      accu[i][j+1] = accu[i][j] + 
+		     INT_2WM ( 
+			     shiftINT_2WM 
+			     ( INT_2WM ( alpha[j]*alpha[i+j] ) , -bitsPMAX )
+			     );
+      end;
+    isclx[i+1] = if ( i == 0 ) -> 
+		   bitsInINT_2WM ( accu[i][PMAXplus1-i] ) + 1 - WM
+		 ||
+		   isclx[i]
+		 fi;
+    return[i] = if ( i == 0 ) ->
+		  minINT_WM ( INT_WM ( MAXM ),
+			      INT_WM ( shiftINT_2WM ( accu[i][PMAXplus1-i] , 
+						      -isclx[i+1] 
+						    ) 
+			             )
+		            )
+		||
+	          INT_WM ( shiftINT_2WM ( accu[i][PMAXplus1-i] , -isclx[i+1] ) )
+		fi;
+    end;
+  end;
+
+/*#################################################################*/  
+
+func computeSyndrome 
+     ( s : INT_S[NplusPMAX] ; /* N input samples with errors zeroed */
+       t : INT_T[M] ; /* N error positions */
+       lambda : INT_WM[PMAXplus1] 
+     ) : INT_2WM[] = /* syndrome vector */
+  begin
+  (i : 0 .. Mmin1 ) ::
+    begin
+    accu[i][0] = INT_2WM ( 0 );
+    (j : 1 .. PMAX ) ::
+      begin
+      sig1[i][j] = INT_M ( t[i] ) + INT_M ( j );
+      sig2[i][j] = INT_M ( t[i] ) - INT_M ( j );
+      sig3[i][j] = if ( t[i] != 0 ) -> 
+		     INT_S ( lookup ( s[] , sig1[i][j] ) )
+                   ||                  
+		     0
+                   fi;
+      sig4[i][j] = if ( t[i] != 0 ) -> 
+		     INT_S ( lookup ( s[] , sig2[i][j] ) )
+                   ||                  
+		     0
+		   fi;
+      accu[i][j] = if ( t[i] != INT_T ( 0 ) ) ->
+		       accu[i][j-1] +
+		       INT_2WM ( lambda[j] * sig3[i][j] ) +
+		       INT_2WM ( lambda[j] * sig4[i][j] ) 
+                     ||
+		       accu[i][j-1]
+                     fi;
+      end;
+    return[i] = -accu[i][PMAX];
+    end;
+  end;
+
+/*#################################################################*/  
+
+func scaleSig
+     ( s : INT_S;
+       q : INT_7
+     ) : INT_S =
+  begin
+  return = if ( q > 0 ) -> minINT_S ( MAXM , shiftINT_S ( s , -q ) )
+	   ||              shiftINT_S ( s , -q ) 
+	   fi;
+  end;
+
+/*#################################################################*/  
+
+func solveSamples 
+     ( lambda : INT_WM[PMAXplus1]; /* lambda vector */
+       t : INT_T[M];            /* error positions */
+       syn : INT_2WM[M]         /* syndrome vector */
+     ) out : INT_S[];           /* missing samples */
+       iscl : INT_7 =           /* scale factor */
+  begin
+  /*
+  compute a central matrix
+  */
+  (j : 0 .. Mmin1 ) ::
+    begin
+    (i : 0 .. Mmin1 ) ::
+      begin
+    m[0][i][j][0] = if ( t[i] > 0 & t[j] > 0 & (t[i]-t[j]) >= 0 ) ->
+		     INT_WM1 ( lookup ( lambda[] , t[i]-t[j] ) )
+                   || ( t[i] > 0 & t[j] > 0 & (t[j]-t[i]) >= 0 ) ->
+		     INT_WM1 ( lookup ( lambda[] , t[j]-t[i] ) )
+                   || ( i == j ) ->
+		     INT_WM1(1)
+                   ||
+		     INT_WM1(0)
+                   fi;
+      m[0][i][j][1] = m[0][i][j][0];
+      end;
+    end;
+
+  iscl2[0]=INT_7(0);
+  /*
+  build a triangular matrix
+  */
+  (i : 0 .. Mmin1 ) ::
+    begin
+    x[0][i] = syn[i];
+    end;
+  (i : 1 .. Mmin1 ) ::
+    begin
+    largest[i][0]=INT_WM1(0);
+    d0[i] = INT_WM ( m[i-1][i-1][i-1][1] );
+    f2[i] = INT_WM ( x[i-1][i-1] / d0[i] );
+    (j : 0 .. Mmin1 ) ::
+      begin
+      f0[i][j] = m[i-1][j][i-1][1];
+      f1[i][j] = INT_2WM ( ( INT_2WM ( f0[i][j] ) << ( WMmin1 ) ) / d0[i] );
+      mask[i][j][0]=INT_WM1(0);
+      (k : 0 .. Mmin1 ) ::
+	begin
+	m[i][j][k][0] =  if ( j<i | k<i ) ->
+	  m[i-1][j][k][1]
+			 ||
+       	  m[i-1][j][k][1] - 
+	  INT_WM1 ( shiftINT_2WM ( INT_2WM ( f1[i][j] * m[i-1][i-1][k][1] ) , 
+				   -(WMmin1)
+				 )
+                  )
+			 fi;
+          mask[i][j][k+1] = if ( j>=i & k>=i ) ->
+	                      mask[i][j][k] | abs( m[i][j][k][0] )
+			    ||
+			      mask[i][j][k]
+                            fi;
+	end;
+      x[i][j] = if ( j < i ) ->
+		    x[i-1][j]
+                  ||
+		    x[i-1][j] - INT_2WM ( f0[i][j] * f2[i] )
+                  fi;
+      largest[i][j+1]=largest[i][j] | mask[i][j][M];
+      end;
+
+  /*
+  scale m[i][j]
+  */
+  ibitm[i] = bitsInINT_WM1 ( largest[i][M] );
+  iscl0[i] = ibitm[i] - WMmin1;
+  iscl2[i] = if ( iscl0[i] > 0 ) -> iscl2[i-1]-iscl0[i] 
+	     ||                     iscl2[i-1] 
+	     fi;
+  (j : 0 .. Mmin1 ) ::
+    begin
+    (k : 0 .. Mmin1 ) ::
+      begin
+      m[i][j][k][1] = if ( j<i ) ->
+			m[i-1][j][k][1]
+		      || ( iscl0[i] > 0 ) ->
+		        shiftINT_WM1 ( m[i][j][k][0] , -iscl0[i] )
+                      ||
+		        m[i][j][k][0]
+                     fi;
+      end;
+    end;
+  end;
+  
+  /*
+  back substitution
+  */ 
+  isclx[0] = iscl2[Mmin1];
+  (i : 0 .. Mmin1 ) ::
+    begin
+    accu[i][M-i] = x[Mmin1][Mmin1-i];
+    (j : M-i .. Mmin1 ) ::
+      begin
+      accu[i][j+1] = accu[i][j] - 
+		     INT_2WM ( m[Mmin1][Mmin1-i][j][1] * x0[M-i][j][1] );
+      end;
+    x0[Mmin1-i][Mmin1-i][0] = INT_2WM ( accu[i][M] / m[Mmin1][Mmin1-i][Mmin1-i][1] );
+    iscl1[i] = bitsInINT_2WM ( INT_2WM ( abs ( x0[Mmin1-i][Mmin1-i][0] ) ) ) - WMmin1;
+    isclx[i+1] = if ( iscl1[i] > 0 ) -> isclx[i] + iscl1[i]
+		 ||                     isclx[i]
+		 fi;
+    x0[Mmin1-i][Mmin1-i][1] = if ( iscl1[i] > 0 ) -> 
+   	                shiftINT_2WM ( x0[Mmin1-i][Mmin1-i][0] , -iscl1[i] )
+                      ||
+                        x0[Mmin1-i][Mmin1-i][0]
+	              fi;     
+    (j : M-i .. Mmin1 ) ::
+      begin
+      x0[Mmin1-i][j][1] = if ( iscl1[i] > 0 ) -> 
+	    	   shiftINT_2WM ( x0[M-i][j][1] , -iscl1[i] )
+                 ||
+		   x0[M-i][j][1]
+		 fi;     
+      end;
+    end;
+
+  /* 
+  results
+  */ 
+  iscl = isclx[M];
+  (i : 0 .. Mmin1 ) ::
+    begin
+    out[i] = INT_WM ( x0[0][i][1] );
+    end;
+  end;
+
+/*#################################################################*/  
+
+func minINT_S 
+     ( s1 : INT_S;
+       s2 : INT_S
+     ) : INT_S =
+  begin
+  return = if ( s1 < s2 ) -> s1 || s2 fi;
+  end;
+
+/*#################################################################*/  
+
+func minINT_WM
+     ( s1 : INT_WM;
+       s2 : INT_WM
+     ) : INT_WM =
+  begin
+  return = if ( s1 < s2 ) -> s1 || s2 fi;
+  end;
+
+/*#################################################################*/  
+
+func ROUNDINT_2WM
+     ( s : INT_2WM;      /* input to be rounded */
+       q : INT_7       /* number of bits that are to be
+			  shifted out */
+     ) : INT_2WM =
+  begin
+  sig1 = if ( s < 0 ) -> !s
+	 ||               s
+	 fi;
+  sig2 = shiftINT_2WM ( sig1 , -q );
+  sig3 = if ( s < 0 ) -> !sig2
+	 ||               sig2
+	 fi;
+  return = if ( q == 0 ) ->
+	      sig3
+	   || ( ( shiftINT_2WM ( 1 , q-1 ) & s ) != 0 ) -> 
+	      sig3 + 1
+       	   ||
+	      sig3
+	   fi;
+  end;
+
+/*#################################################################*/  
+
+func bitsInINT_2WM
+     ( s : INT_2WM      /* input word */
+     ) : INT_7 =       /* minimum number of bits needed 
+			  to compose the input word */
+  begin
+  tmp[0]=s;
+  count[0]=INT_7(0);
+  (i:1.. bitsINT_2WM) ::
+    begin
+    count[i] = if ( tmp[i-1] != 0 ) -> count[i-1] + 1
+	       ||                      count[i-1]
+	       fi;
+    tmp[i] = tmp[i-1] >> 1;
+    end;
+  return = count[bitsINT_2WM];
+  end;
+
+/*#################################################################*/  
+
+func bitsInINT_AC
+     ( s : INT_AC      /* input word */
+     ) : INT_7 =       /* minimum number of bits needed 
+			  to compose the input word */
+  begin
+  tmp[0]=s;
+  count[0]=INT_7(0);
+  (i:1.. bitsINT_AC) ::
+    begin
+    count[i] = if ( tmp[i-1] != 0 ) -> count[i-1] + 1
+	       ||                      count[i-1]
+	       fi;
+    tmp[i] = tmp[i-1] >> 1;
+    end;
+  return = count[bitsINT_AC];
+  end;
+
+/*#################################################################*/  
+
+func route
+     ( s : INT_S
+     ) : INT_V =
+  begin
+  return = INT_V ( s >> WMminV );
+  end;
+
+/*#################################################################*/  
+
+func bitsInINT_S
+     ( s : INT_S       /* input word */
+     ) : INT_7 =       /* minimum number of bits needed 
+			  to compose the input word */
+  begin
+  tmp[0]=s;
+  count[0]=INT_7(0);
+  (i:1.. bitsINT_S) ::
+    begin
+    count[i] = if ( tmp[i-1] != 0 ) -> count[i-1] + 1
+	       ||                      count[i-1]
+	       fi;
+    tmp[i] = tmp[i-1] >> 1;
+    end;
+  return = count[bitsINT_S];
+  end;
+
+/*#################################################################*/  
+
+func shiftINT_AC
+     ( s : INT_AC;      /* input to be rounded */
+       q : INT_7       /* number of bits that are to be
+			  shifted out */
+     ) : INT_AC =
+  begin
+  return = if ( s == -1 & q < 0 ) -> INT_AC (0)
+	   || ( q >=  0         ) -> INT_AC ( shiftleft  ( s , q ) )
+	   ||                        INT_AC ( shiftright ( s ,-q ) )
+	   fi;
+  end;
+
+/*#################################################################*/  
+
+func shiftINT_2WM
+     ( s : INT_2WM;      /* input to be rounded */
+       q : INT_7       /* number of bits that are to be
+			  shifted out */
+     ) : INT_2WM =
+  begin
+  return = if ( s == -1 & q < 0 ) -> INT_2WM (0)
+	   || ( q >=  0         ) -> INT_2WM ( shiftleft  ( s , q ) )
+	   ||                        INT_2WM ( shiftright ( s ,-q ) )
+	   fi;
+  end;
+
+/*#################################################################*/  
+
+func shiftINT_WM
+     ( s : INT_WM;      /* input to be rounded */
+       q : INT_7       /* number of bits that are to be
+			  shifted out */
+     ) : INT_WM =
+  begin
+  return = if ( s == -1 & q < 0 ) -> INT_WM (0)
+	   || ( q >=  0         ) -> INT_WM ( shiftleft  ( s , q ) )
+	   ||                        INT_WM ( shiftright ( s ,-q ) )
+	   fi;
+  end;
+
+/*#################################################################*/  
+
+func shiftINT_S
+     ( s : INT_S;      /* input to be rounded */
+       q : INT_7       /* number of bits that are to be
+			  shifted out */
+     ) : INT_S =
+  begin
+  return = if ( s == -1 & q < 0 ) -> INT_S (0)
+	   || ( q >=  0         ) -> INT_S ( shiftleft  ( s , q ) )
+	   ||                        INT_S ( shiftright ( s ,-q ) )
+	   fi;
+  end;
+
+/*#################################################################*/  
+
+func shiftINT_WM1
+     ( s : INT_WM1;   /* input to be rounded */
+       q : INT_7       /* number of bits that are to be
+			  shifted out */
+     ) : INT_WM1 =
+  begin
+  return = if ( s == -1 & q < 0 ) -> INT_WM1 (0)
+	   || ( q >=  0         ) -> INT_WM1 ( shiftleft  ( s , q ) )
+	   ||                        INT_WM1 ( shiftright ( s ,-q ) )
+	   fi;
+  end;
+
+
+
+/*#################################################################*/  
+
+func bitsInINT_WM1
+     ( s : INT_WM1       /* input word */
+     ) : INT_7 =       /* minimum number of bits needed 
+			  to compose the input word */
+  begin
+  tmp[0]=s;
+  count[0]=INT_7(0);
+  (i:1.. bitsINT_WM1) ::
+    begin
+    count[i] = if ( tmp[i-1] != 0 ) -> count[i-1] + 1
+	       ||                      count[i-1]
+	       fi;
+    tmp[i] = tmp[i-1] >> 1;
+    end;
+  return = count[bitsINT_WM1];
+  end;
+

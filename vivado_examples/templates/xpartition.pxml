@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!-- Rules for PXML
+     1. It is required that the PXML file be named "xpartition.pxml" (case-sensitive) and that it exists in the directory
+        where the implementation tools are being run.
+     2. When Partitions are being used, it is required that the top level has a Partition.
+     3. When defining a Partition name, the hierarchy starts with "/".  For example "/top" or "/top/moduleA".
+     4. The contents of the xpartition.pxml file are case-sensitive.
+-->
+
+<!-- Below is a list of attributes for the PXML
+     Project
+        + FileVersion="1.2" (Do NOT change this value)
+        + Name="Project_Name"
+        + ProjectVersion="2.0" (Do NOT change this value)
+
+     Partition
+        + Name="Partition_Name" - Hierarchical name of module where the Partition should be applied
+        + State="implement" or "import".  If set to "import", ImportLocation must be specified
+            -	implement –  Partition will be re-implemented from scratch.
+            -	import – Partition will be imported and preserved according to the level set by Preserve.
+        + ImportLocation="path" - Ignored if State does not equal "import".  Path can be relative or hard,
+                                  but the location specified must contain a valid "export" directory when
+                                  "State=import". "NONE" is a predefined keyword for no import directory
+                                  as shown in example below.
+        + Preserve="routing", "placement", "synthesis", or "inherit".  Ignored if State does not equal "import".
+            -	routing –  Placement and Routing is preserved (default for top level Partition)
+            -	placement – Placement is preserved, routing can be moved
+            -	synthesis – Placement and routing can be moved
+            -	inherit – Inherit the value from the parent Partition (default for all Partitions except top level)
+
+  *For more information on the xpartition.pxml file and the Design Preservation flow, please refer
+   to the "Design Preservation Methodology Guide" at http://www.xilinx.com.
+-->
+
+<!-- Begin Editing Here -->
+<Project FileVersion="1.2" Name="Example" ProjectVersion="2.0">
+
+  <Partition Name="/top" State="implement" ImportLocation="NONE">
+
+    <Partition Name="/top/module_A" State="import" ImportLocation="/home/user/Example/import" Preserve="routing">
+    </Partition>
+    <Partition Name="/top/module_B" State="import" ImportLocation="../import" Preserve="routing">
+    </Partition>
+    <Partition Name="/top/module_C" State="implement" ImportLocation="../import" Preserve="placement">
+    </Partition>
+
+  </Partition>
+
+</Project>

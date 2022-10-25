@@ -1,0 +1,68 @@
+Radix-512 Divider Benchmark
+
+Test Vectors Creation Package (make_test, make_tv)
+==================================================
+
+
+
+make_tv
+-------
+
+C-program to generate a VHDL file, suitable for Synopsys simulator,
+from a configuration file, to test the functionality of the Radix-512 
+divider benchmark.
+
+This configuration file must have the following keywords:
+
+start		: generates the header of the VHDL file
+
+end		: generates the tail of the VHDL file
+
+dec <x> <d>	: generate one test vector with values x for the dividend
+		  and d for the divisor. <x> and <d> must be decimal values.
+
+bin <s1> <s2>	: generate one test vector with binary values s1 for the 
+		  dividend and s2 for the divisor. <s1> and <s2> must be
+		  strings of '0' and '1' up to 53 characters.
+
+The 'start' instruction must always precede all 'dec' or/and 'bin' 
+instructions. The 'end' instruction must close the stream flow.
+
+Optional:
+
+delay <value>	: set the simulation delay to <value>. Default is 10 ns.
+		  delay instruction, if present, must appear before start
+		  instruction.
+
+All lines starting with '-' as first character are considered comments.
+
+Example:
+
+--  VHDL test vector generator file
+
+delay 20
+
+start
+
+dec 0.750000 0.875000
+
+bin 100000000000000000000 111111111111111111111111111111111
+
+end
+
+
+
+
+
+make_test
+---------
+
+This is simply a c-shell script to better handle files: to avoid undesired
+over-write of a file, to generate the output file with same name, but 
+different suffix, from the input file.....
+
+
+----------------------------------------------------------------------------
+
+Report comments and bugs to: Alberto Nannarelli (alberto@ece.uci.edu)
+

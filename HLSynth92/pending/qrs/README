@@ -1,0 +1,126 @@
+   
+
+		QRS Benchmark for High-Level Synthesis
+		======================================
+
+               Michael Pilsl, Siemens AG, Munich, Germany
+                       (pilsl@sabine.zfe.siemens.de)
+           Subhrajit Bhattacharya, Duke University, Durham, NC
+                             (sb@mcnc.org)
+             Franc Brglez, MCNC, Research Triangle Park, NC
+                            (brglez@mcnc.org)
+
+This directory contains the design files for the QRS chip.
+
+QRS is a medical application, capable to detect the characteristic
+Q-R-S points of the ECG data stream. The QRS chip is intended to
+serve, e.g., as heart rate monitor. The incoming ECG data is converted
+by a 12 Bit A/D converter.  The communication of the A/D converter and
+the QRS chip is realized via handshaking. Internally, the QRS chip
+operates with 16 Bit data streams in order to avoid overflow
+situations. The output RRpeak of the Chip is the most interesting
+signal, since RRpeak goes to Zero when a heart beam (Q-R-S curve) has
+been detected.
+
+The VHDL description is divided into several parts:
+
+- "qrs_types.vhdl"
+	contains a package with some predefined data types. Thus, this
+	file has to be compiled first.
+
+- "qrs.vhdl"
+        contains the entity declaration of the QRS chip.
+
+- "qrs_sys.vhdl"
+        contains the system level description of the QRS chip. There is no
+        explicit I/O timing specified. All I/O-Operations are performed
+        via handshaking. This specification leaves every freedom for
+        high level synthesis tools for scheduling. The synthesis tool
+        itself is responsible to synthesize an appropriate interface to
+        the environment of the QRS chip.
+
+- "qrs_algo.vhdl"
+	contains the algorithmic description of the QRS chip,
+	including the exact I/O behavior in terms of clock cycles. In fact,
+	the QRS chip is not a timing critical application. So, the number of
+	clock cycles for the inner loop may be relaxed when suitable. This
+        description might be useful for synthesis systems honouring the
+        specified timing behavior. However, there is still lot of freedom
+        left for the scheduling of the internal operations.
+
+- "qrs_hlsm.vhdl"
+        contains QRS chips specified as high level state machine. This
+        description has been written manually and thus this preliminary
+        version may still contain minor bugs. However, extensive simulation
+        was performed on all three descriptions in order to ensure equal
+        functionality.
+
+- "qrs_stim.vhdl"
+	provides the test bench for simulating the chip. In fact, this
+        description includes configurations for all available architecture
+        descriptions of the QRS chip. The
+	stimulation is provided by the files "qrs_init.data" and
+	"qrs_sim.data", which have been gained from a real ECG data stream.
+
+The VHDL files should be compilable and simulatable with any VHDL 1076
+simulator. We tested simulation with Synopsys simulation environment
+version 3.0 as well as with Vantage simulation environment. For sake
+of portability, only the standard VHDL library has been used. The
+simulation result is written into the file "qrs_sim.peak" containing
+the values of the variable "point" (stimulation process, indicating
+the current data point under process), the signal "RRpeak" detecting
+the Q-R-S peak, and the output "RRo" giving the number of data points
+between two peaks.
+
+The file "qrs_sim.peak_ref", contains the golden reference for correct
+simulation.
+
+The QRS chip was initially designed on RT-level, using the OASIS
+system for logic synthesis and layout generation. For testing the
+algorithm the developers of the chip used a C program which was the
+basis for our VHDL descriptions. Thus, we were able to cross check the
+VHDL simulation results with the original C-algorithm. This version
+was based on a bus structure with three independent add / subtract
+ALUs.  The statistics of this system are comprised in following table
+[2]:
+
+   Technology			1.25 um CMOS
+   Area				5.6 x 7.7 mm*mm
+   Transistor Count		45,544
+   Scan Overhead                11%
+   BIST Overhead                14%
+   Test Pin Overhead            4 pins
+   Maximum Clock Rate           20 MHz
+   Fault Coverage               99%
+   Test Vectors                 522,000
+
+The interested reader is referred to [1], [2] for further informations
+on the QRS chip and its algoritum and implementation. In [3], the
+results of this benchmark obtained with the CALLAS system have been
+published.
+
+Acknowledgement
+==============
+
+This QRS benchmark has been developed within an collaborative project
+which has been supported by management and staff at Siemens and MCNC.
+The project would not have succeeded without the continued support of
+all of the CALLAS team members at Siemens and all of the OASIS team
+members at MCNC. Especially, we would like to thank Subash Roy as the
+key designer of the QRS chip and Kris Kozminski for his support with
+OASIS.
+
+References
+==========
+
+[1] S.C. Roy. "A Digital QRS Detector and Arrhythmia Monitor."
+    Master's thesis, University of North Carolina at Chapel Hill, 1990.
+
+[2] S.C. Roy, H.T. Nagle, M.G. McNamer, and W.T. Krakow. "QRS/BIST: A
+    Reliable Cardiac Arrhythmia Monitor ASIC." In Proceedings 3rd Annual
+    IEEE ASIC Seminar and Exhibit, September 1990.
+
+[3] M. Pilsl, S. Bhattacharya, and F. Brglez. "Synthesizing Behavioral
+    Benchmarks in VHDL into Standard Cell Layout." In Proceedings of 6th
+    International Workshop on High Level Synthesis, California, USA,
+    November 1992.

@@ -1,0 +1,37 @@
+total 235
+       512 Dec  7  1989 DATA
+       512 Dec  7  1989 DOCUMENTATION
+         0 Jul 24 18:09 HLSynth89.list
+      2267 Jul 24 18:04 HLSynth89.readme
+    163840 Jul 24 18:07 HLSynth89.tar
+     63039 Jul 24 18:08 HLSynth89.tar.Z
+
+HLSynth89/DATA:
+total 142
+       578 Dec  7  1989 4count.v
+     15048 Dec  7  1989 blit.c
+       959 Dec  7  1989 count_control.vhd
+       712 Dec  7  1989 counter.vhd
+       628 Dec  7  1989 fft.doc
+       424 Dec  7  1989 gcd.v
+       431 Dec  7  1989 gcd.vhd
+       907 Dec  7  1989 gcd_control.vhd
+      4153 Dec  7  1989 i8251.doc
+      8044 Dec  7  1989 i8251.hc
+      9802 Dec  7  1989 i8251.isp
+      4509 Dec  7  1989 kalmanio.isp
+     12910 Dec  7  1989 mc6502.isp
+     69038 Dec  7  1989 mc68000.isp
+       966 Dec  7  1989 mtlc.v
+      1138 Dec  7  1989 pf_control.vhd
+       852 Dec  7  1989 pitch.doc
+      1090 Dec  7  1989 prefetch.v
+       783 Dec  7  1989 prefetch.vhd
+      1265 Dec  7  1989 tlc.vhd
+       810 Dec  7  1989 tlc_control.vhd
+       151 Dec  7  1989 vvectors.vhd
+
+HLSynth89/DOCUMENTATION:
+total 3
+       971 Dec  7  1989 bench.doc
+      1282 Dec  7  1989 doc.v

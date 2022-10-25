@@ -1,0 +1,40 @@
+--------------------------------------------------------------------------------
+--
+--   Traffic light Controller Benchmark
+--
+-- Source: The model and test patterns were obtained from the Hardware C   
+--         model written by R. Gupta (7/23/90) at Stanford.
+--
+-- author: Champaka Ramachandran
+--         University Of California, Irvine, CA 92717
+--         champaka@balboa.eng.uci.edu
+-- 
+-- Written on August 11th 1992
+--
+--------------------------------------------------------------------------------
+
+-----------------
+Functionality :
+-----------------
+
+   Highway light is green normally. When there is a car on the side
+road and the highway light has been on for 'timeoutL' time, the highway
+light turns yellow. 'timeoutS' time after it has turned yellow,
+the highway light turns red and the side road light turns green. 
+
+If there are no cars on the side road or the side road light has been 
+on for 'timeoutL' time the side road light turns yellow. 'timeoutS'
+time after it has turned yellow, the side road light turns red and 
+the highway road light turns green. 
+
+I guess the above timer signals would be connected to some external 
+timer circuit. The startIimer would start the external timer 
+circuitry everytime the state changes. The TimeoutL and TimeoutS 
+should originate from the external timer. Apparently, the model does 
+not describe how this works. 
+
+In this model, the highway light is green usually. When there 
+is a car on the side road, the side road light is green till max 'timeoutL' 
+time and then goes back to red irrespective of whether there are cars on the 
+highway. Infact, the model never checks for cars on the highway. 
+Thus, the highway has priority over the side road. 

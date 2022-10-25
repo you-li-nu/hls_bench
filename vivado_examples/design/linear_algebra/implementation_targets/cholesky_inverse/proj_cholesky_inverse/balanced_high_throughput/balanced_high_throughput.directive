@@ -1,0 +1,16 @@
+<AutoPilot:ProjectResources xmlns:AutoPilot="com.autoesl.autopilot.ui.directiveView">
+    <sourceFile name="">
+        <directive functionName="cholesky_inverse_balanced" label="" functionLabel="">
+            <pragma name="TOP">
+                <option name="name" value="DESIGN_TOP"/>
+            </pragma>
+        </directive>
+        <directive functionName="cholesky_inverse_top" label="" functionLabel="">
+            <pragma name="DATAFLOW"/>
+        </directive>
+        <directive functionName="cholesky_inverse_balanced" label="" functionLabel="">
+            <pragma name="DATAFLOW"/>
+        </directive>
+    </sourceFile>
+</AutoPilot:ProjectResources>
+

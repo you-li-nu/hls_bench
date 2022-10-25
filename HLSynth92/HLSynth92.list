@@ -1,0 +1,451 @@
+total 15244
+   1 2901/
+   1 2910/
+   1 8251/
+  14 GUIDELINES*
+   0 HLSynth92.list
+7732 HLSynth92.tar
+   6 README*
+   1 arms_counter/
+   1 diffeq/
+   1 ellipf/
+   1 gcd/
+   1 kalman/
+   1 pending/
+   1 tlc/
+
+HLSynth92/2901:
+total 281
+  13 MVL7_functions.vhd*
+   5 README*
+   1 alg_beh/
+  12 am2901.doc*
+  21 am2901.ps*
+   1 cmd.inc*
+   1 funct_blocks_alg_beh/
+   1 synthesis_types.vhd*
+  35 test_vectors.bits*
+  14 test_vectors.doc*
+ 140 test_vectors_2901.vhdl*
+   9 trans.c*
+  31 types.vhd*
+
+HLSynth92/2901/alg_beh:
+total 12
+   4 alg_beh2901.doc*
+   8 alg_beh2901.vhdl*
+
+HLSynth92/2901/funct_blocks_alg_beh:
+total 10
+   1 components/
+   3 funct_block_alg_beh2901.doc*
+   6 funct_block_alg_beh2901.vhdl*
+
+HLSynth92/2901/funct_blocks_alg_beh/components:
+total 4
+   1 Q_reg/
+   2 README*
+   1 alu/
+   1 alu_inputs/
+   1 mem/
+   1 output_and_shifter/
+
+HLSynth92/2901/funct_blocks_alg_beh/components/Q_reg:
+total 55
+  13 MVL7_functions.vhd*
+   2 README*
+   1 cmd_q.inc*
+   2 q_reg.vhdl*
+   5 test_vectors.vhdl*
+   3 test_vectors_q_reg.doc*
+  31 types.vhd*
+
+HLSynth92/2901/funct_blocks_alg_beh/components/alu:
+total 66
+  13 MVL7_functions.vhd*
+   2 README*
+   4 alu.vhdl*
+   1 cmd_alu.inc*
+   2 q_reg.vhdl*
+  12 test_vectors.vhdl*
+   4 test_vectors_alu.doc*
+  31 types.vhd*
+
+HLSynth92/2901/funct_blocks_alg_beh/components/alu_inputs:
+total 58
+  13 MVL7_functions.vhd*
+   2 README*
+   2 alu_inputs.vhdl*
+   1 cmd_alu_inputs.inc*
+   2 q_reg.vhdl*
+   5 test_vectors.vhdl*
+   3 test_vectors_alu_inputs.doc*
+  31 types.vhd*
+
+HLSynth92/2901/funct_blocks_alg_beh/components/mem:
+total 16
+   2 README*
+   1 cmd_mem.inc*
+   2 mem.vhdl*
+   8 test_vectors.vhdl*
+   4 test_vectors_mem.doc*
+
+HLSynth92/2901/funct_blocks_alg_beh/components/output_and_shifter:
+total 15
+   2 README*
+   1 cmd_op_sh.inc*
+   2 op_sh.vhdl*
+   8 test_vectors.vhdl*
+   3 test_vectors_op_sh.doc*
+
+HLSynth92/2910:
+total 723
+  13 MVL7_functions.vhd*
+   4 README*
+   1 alg_beh/
+  16 am2910.doc*
+  18 am2910.ps*
+   1 cmd.inc*
+   1 funct_block_alg_beh/
+   1 synthesis_types.vhd*
+ 124 test_vectors.bits*
+   6 test_vectors.doc*
+ 500 test_vectors_2910.vhdl*
+  10 trans.c*
+  31 types.vhd*
+
+HLSynth92/2910/alg_beh:
+total 13
+   2 alg_beh2910.doc*
+  11 alg_beh2910.vhdl*
+
+HLSynth92/2910/funct_block_alg_beh:
+total 9
+   1 components/
+   3 funct_block_alg_beh2910.doc*
+   6 funct_block_alg_beh2910.vhdl*
+
+HLSynth92/2910/funct_block_alg_beh/components:
+total 4
+   2 README*
+   1 control/
+   1 mux/
+   1 reg/
+   1 stack/
+   1 upc/
+
+HLSynth92/2910/funct_block_alg_beh/components/control:
+total 200
+  13 MVL7_functions.vhd*
+   2 README*
+   1 cmd_control.inc*
+   4 control.vhdl*
+   1 synthesis_types.vhd*
+   1 test_vectors_control.doc*
+ 148 test_vectors_control.vhdl*
+  31 types.vhd*
+
+HLSynth92/2910/funct_block_alg_beh/components/mux:
+total 55
+  13 MVL7_functions.vhd*
+   2 README*
+   1 cmd_mux.inc*
+   2 mux.vhdl*
+   1 synthesis_types.vhd*
+   1 test_vectors_mux.doc*
+   5 test_vectors_mux.vhdl*
+  31 types.vhd*
+
+HLSynth92/2910/funct_block_alg_beh/components/reg:
+total 59
+  13 MVL7_functions.vhd*
+   2 README*
+   1 cmd_reg.inc*
+   2 reg.vhdl*
+   1 synthesis_types.vhd*
+   1 test_vectors_reg.doc*
+   9 test_vectors_reg.vhdl*
+  31 types.vhd*
+
+HLSynth92/2910/funct_block_alg_beh/components/stack:
+total 62
+  13 MVL7_functions.vhd*
+   2 README*
+   1 cmd_stack.inc*
+   2 stack.vhdl*
+   1 synthesis_types.vhd*
+   1 test_vectors_stack.doc*
+  12 test_vectors_stack.vhdl*
+  31 types.vhd*
+
+HLSynth92/2910/funct_block_alg_beh/components/upc:
+total 55
+  13 MVL7_functions.vhd*
+   2 README*
+   1 cmd_upc.inc*
+   1 synthesis_types.vhd*
+   1 test_vectors_upc.doc*
+   6 test_vectors_upc.vhdl*
+  31 types.vhd*
+   2 upc.vhdl*
+
+HLSynth92/8251:
+total 148
+  43 8251.doc*
+  47 8251.vhd*
+  14 MVL7_functions.vhd*
+   3 README*
+   1 cmd.inc*
+   1 components/
+   1 synthesis_types.vhd*
+   8 test_vectors.doc*
+  31 types.vhd*
+   2 vectors/
+
+HLSynth92/8251/components:
+total 3
+   2 README*
+   1 part_main/
+   1 part_rx/
+   1 part_tx/
+
+HLSynth92/8251/components/part_main:
+total 445
+  14 MVL7_functions.vhd*
+   2 README*
+   1 cmd_main.inc*
+  12 main.vhd*
+   1 synthesis_types.vhd*
+   6 test_vectors_main.doc*
+ 380 test_vectors_main.vhd*
+  31 types.vhd*
+
+HLSynth92/8251/components/part_rx:
+total 78
+  14 MVL7_functions.vhd*
+   2 README*
+   1 cmd_rx.inc*
+  21 rx.vhd*
+   1 synthesis_types.vhd*
+   9 test_vectors_rx.doc*
+  31 types.vhd*
+   1 vectors/
+
+HLSynth92/8251/components/part_rx/vectors:
+total 442
+   2 README*
+  34 rx_async_16x_5.vhdl.Z*
+  37 rx_async_16x_6.vhdl.Z*
+  40 rx_async_16x_7.vhdl.Z*
+  43 rx_async_16x_8.vhdl.Z*
+  34 rx_async_1x.vhdl.Z*
+  42 rx_async_64x_5.vhdl.Z*
+  45 rx_async_64x_6.vhdl.Z*
+  48 rx_async_64x_7.vhdl.Z*
+  56 rx_async_64x_8.vhdl.Z*
+  29 rx_ext_sync.vhdl.Z*
+  34 rx_int_sync.vhdl.Z*
+
+HLSynth92/8251/components/part_tx:
+total 66
+  14 MVL7_functions.vhd*
+   2 README*
+   1 cmd_tx.inc*
+   1 synthesis_types.vhd*
+   7 test_vectors_tx.doc*
+  10 tx.vhd*
+  31 types.vhd*
+   1 vectors/
+
+HLSynth92/8251/components/part_tx/vectors:
+total 901
+   3 README*
+  38 tx_async_5_16x.vhdl.Z*
+  10 tx_async_5_1x.vhdl.Z*
+  46 tx_async_5_64x_1.5stop.vhdl.Z*
+  44 tx_async_5_64x_1stop.vhdl.Z*
+  48 tx_async_5_64x_2stop.vhdl.Z*
+  41 tx_async_6_16x.vhdl.Z*
+  12 tx_async_6_1x.vhdl.Z*
+  56 tx_async_6_64x_1.5stop.vhdl.Z*
+  47 tx_async_6_64x_1stop.vhdl.Z*
+  56 tx_async_6_64x_2stop.vhdl.Z*
+  44 tx_async_7_16x.vhdl.Z*
+  13 tx_async_7_1x.vhdl.Z*
+  60 tx_async_7_64x_1.5stop.vhdl.Z*
+  56 tx_async_7_64x_1stop.vhdl.Z*
+  60 tx_async_7_64x_2stop.vhdl.Z*
+  47 tx_async_8_16x.vhdl.Z*
+  13 tx_async_8_1x.vhdl.Z*
+  64 tx_async_8_64x_1.5stop.vhdl.Z*
+  60 tx_async_8_64x_1stop.vhdl.Z*
+  64 tx_async_8_64x_2stop.vhdl.Z*
+  22 tx_sync.vhdl.Z*
+
+HLSynth92/8251/vectors:
+total 3762
+   5 README*
+  46 rx_async_5_16x_even.vhdl.Z*
+  43 rx_async_5_16x_no.vhdl.Z*
+  47 rx_async_5_16x_odd.vhdl.Z*
+  30 rx_async_5_1x.vhdl.Z*
+ 132 rx_async_5_64x_even.vhdl.Z*
+ 116 rx_async_6_16x.vhdl.Z*
+  33 rx_async_6_1x.vhdl.Z*
+ 148 rx_async_6_64x_even.vhdl.Z*
+ 124 rx_async_7_16x.vhdl.Z*
+  35 rx_async_7_1x.vhdl.Z*
+ 164 rx_async_7_64x_even.vhdl.Z*
+ 132 rx_async_8_16x.vhdl.Z*
+  37 rx_async_8_1x.vhdl.Z*
+ 176 rx_async_8_64x_even.vhdl.Z*
+  26 syrx_5.vhdl.Z*
+  30 syrx_6.vhdl.Z*
+  32 syrx_7.vhdl.Z*
+  60 sytx.vhdl.Z*
+ 112 tx_async_5_16x.vhdl.Z*
+  23 tx_async_5_1x.vhdl.Z*
+ 136 tx_async_5_64x_1.5stop.vhdl.Z*
+ 128 tx_async_5_64x_1stop.vhdl.Z*
+ 148 tx_async_5_64x_2stop.vhdl.Z*
+ 120 tx_async_6_16x.vhdl.Z*
+  26 tx_async_6_1x.vhdl.Z*
+ 152 tx_async_6_64x_1.5stop.vhdl.Z*
+ 144 tx_async_6_64x_1stop.vhdl.Z*
+ 164 tx_async_6_64x_2stop.vhdl.Z*
+ 128 tx_async_7_16x.vhdl.Z*
+  26 tx_async_7_1x.vhdl.Z*
+ 168 tx_async_7_64x_1.5stop.vhdl.Z*
+ 164 tx_async_7_64x_1stop.vhdl.Z*
+ 180 tx_async_7_64x_2stop.vhdl.Z*
+ 140 tx_async_8_16x.vhdl.Z*
+  30 tx_async_8_1x.vhdl.Z*
+ 184 tx_async_8_64x_1.5stop.vhdl.Z*
+ 176 tx_async_8_64x_1stop.vhdl.Z*
+
+HLSynth92/arms_counter:
+total 41
+   3 ARMS_COUNTER.vhdl*
+   3 README*
+   3 arms_counter.doc*
+   1 cmd.inc*
+  18 pack_2_0.vhd*
+   2 test_vectors.doc*
+  11 test_vectors_ARMS_COUNTER.vhdl*
+
+HLSynth92/diffeq:
+total 34
+   2 DIFFEQ.vhdl*
+   3 README*
+   1 cmd.inc*
+   2 diffeq.doc*
+   4 test_vectors.doc*
+  23 test_vectors_DIFFEQ.vhdl*
+
+HLSynth92/ellipf:
+total 36
+   3 README*
+   1 cmd.inc*
+   3 ellip.doc*
+   3 ellip.vhdl*
+  15 pack_2.0.vhd*
+   2 test_vectors.doc*
+  10 test_vectors.vhdl*
+
+HLSynth92/gcd:
+total 37
+   2 GCD.vhdl*
+   3 README*
+   1 cmd.inc*
+   2 gcd.doc*
+  19 pack_2_0.vhd*
+   3 test_vectors.doc*
+   8 test_vectors_GCD.vhdl*
+
+HLSynth92/kalman:
+total 90
+   4 KALMAN.vhdl*
+   3 README*
+   1 cmd.inc*
+   2 kalman.doc*
+  19 pack_3.0.vhd*
+   6 test_vectors.doc*
+  56 test_vectors_KALMAN.vhdl*
+
+HLSynth92/pending/
+total 908
+
+   HLSynth92/pending/barcode:
+   total 265
+      2 README
+      1 barcode.io
+      3 barcode.vhdl
+      3 barcode_stim.vhdl
+    213 waves.ps.1
+     27 waves.ps.2
+
+   HLSynth92/pending/display:
+   total 34
+      2 README
+      1 display.io
+      3 display.vhdl
+      2 display_stim.vhdl
+     21 waves.ps
+
+   HLSynth92/pending/falsepath:
+   total 21
+      2 README
+      1 falsepath.io
+      3 falsepath.vhdl
+      3 falsepath_stim.vhdl
+      9 waves.ps
+
+   HLSynth92/pending/fancy:
+   total 47
+      2 README
+      1 fancy.io
+      2 fancy.vhdl
+      3 fancy_stim.vhdl
+     35 waves.ps
+
+   HLSynth92/pending/gcd_alt:
+   total 34
+      2 README
+      1 gcd.io
+      1 gcd.vhdl
+      2 gcd_stim.vhdl
+     24 waves.ps
+
+   HLSynth92/pending/highway:
+   total 84
+      2 README
+      1 highway_algo.io
+      2 highway_algo.vhdl
+      1 highway_hlsm.io
+      3 highway_hlsm.vhdl
+      3 highway_stim.vhdl
+     34 waves_algo.ps
+     34 waves_hlsm.ps
+
+   HLSynth92/pending/qrs:
+   total 429
+      5 README
+      1 qrs.vhdl
+      8 07:01 qrs_algo.vhdl
+     15 qrs_hlsm.vhdl
+          qrs_init.data
+     46 qrs_sim.data
+    161 qrs_sim.peak
+    161 qrs_sim.peak_ref
+      4 qrs_stim.vhdl
+      6 qrs_sys.vhdl
+      1 qrs_types.vhdl
+
+HLSynth92/tlc:
+total 26
+   3 README*
+   2 TLC.doc*
+   4 TLC.vhdl*
+   1 cmd.inc*
+   5 test_vectors.doc*
+  12 test_vectors_TLC.vhdl*

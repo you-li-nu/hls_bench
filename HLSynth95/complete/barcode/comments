@@ -1,0 +1,109 @@
+The authors have not provided a hi-level description for this benchmark 
+in the form of say, an
+English description. I have written the barcode algorithm below in pseudo-code, 
+based on its VHDL description. However, I have no way of making sure that
+this description matches the original hi level description, since its not
+available.
+
+The algorithm consists of reading in the bits that come in on scanning a
+barcode of black and white stripes, and
+recording the width of the stripes. Everytime there is a
+transition from one color of stripe to another (whether black->white or vice
+cersa), it is recorded in a single counter.
+There is a memory to which results are written, the addresses in the memory
+corresonding to the number of transitions encountered. Even though results
+are written to memory everytime two consecutive bits corresponding to the
+same color appear at the input, the locations eventually hold the width of
+the stripe encountered prior to that transition. See algorithm below and the
+postscript file "wave.ps.2".
+
+
+
+_____________________ PSEUDO-CODE FOR THE BARCODE ALGORITHM__________________
+
+Explanation of variables used:
+
+* white_width is the width of current white stripe. Initially = 0.
+* black_width is the width of current black stripe. Initially = 0.
+* transitions is the number of transitions (bl/wh or wh/bl) encountered in
+	the code so far. Initially = 0.
+* data is the value to be written to memory if enable to memory is 1, at the
+	address "address".
+
+BEGIN
+outer loop:
+
+spin till (clk = 1 and start = 1);
+
+loop one:
+	spin till (clk = 1 and scan = 1);
+
+	loop two:
+		read the new video bit;
+
+		if (new_bit = wh)
+			wait till (clk = 1);
+			++white_width;
+
+			if (previous_bit = bl)
+				++transitions;
+				enable write to memory;
+			else disable write to memory;
+			end if;
+
+			data = white_width;
+			black_width = 0;
+			previous_bit = wh;
+
+		else 
+			wait till (clk = 1);
+			++black_width;
+
+			if (previous_bit = wh)
+				++transitions;
+				enable write to memory;
+			else disable write to memory;
+
+			data = black_width;
+			white_width = 0;
+			previous_bit = bl;
+
+		end if;
+		mem_address = transitions;
+
+		if (white_width = 255 or black_width = 255)
+			exit loop two;
+		end if;
+	end of loop two;
+
+	if (transitions = total_num and white = 255)
+		exit loop one;
+	end if;
+
+end of loop one;
+
+wait till start = 0;
+end of outer loop;
+
+END
+
+________________________________________________________________________
+
+Note that owing to the "wait till (clk = 1)", the change in the variables
+white_width and blak_width is not reflected till a clock cycle after reading
+the value of the new bit. 
+
+
+I am not familiar with the way barcodes are interpreted, and the
+algorithm being implemented in barcode.vhdl is unknown to me. I think a hi-level
+description of how the barcodes are interpreted must be included in this
+benchmark. Also, the VHDL code describing it is not commented at all, so is not
+easy to understand the algorithm from this either. 
+
+I am not able to comment on the completeness of the tests because I am not
+familiar with the algorithm being tested. However, the results I got on
+simulation are the same as the authors expect in the postscript output
+file waves.ps.2, which is a snapshot of the simulation output over a small
+window.
+
+

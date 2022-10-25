@@ -1,0 +1,10 @@
+INPUT FILE s Inp.s;
+INPUT FILE t Inp.t;
+INPUT FILE m Inp.m;
+DISPLAY main s;
+DISPLAY main r0;
+DISPLAY main alpha;
+DISPLAY main nscl;
+DISPLAY main lambda0;
+DISPLAY main syn;
+DISPLAY main return;

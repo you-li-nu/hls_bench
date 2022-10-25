@@ -1,0 +1,71 @@
+--------------------------------------------------------------------------------
+--
+--   Kalman Filter Benchmark
+--
+-- Source:  The model, test patterns and part of the documentation
+--          were obtained from Cleland O Newton at DRA Malvern, UK.
+--
+-- author: Champaka Ramachandran
+--         University Of California, Irvine, CA 92717
+--         champaka@balboa.eng.uci.edu
+--
+-- Written on Aug 24th, 92
+--
+--------------------------------------------------------------------------------
+
+
+THIS DIRECTORY HAS THE FOLLOWING FILES :
+
+( NOTE: These files, especially the test vectors, pertain to all three 
+        sub-directories mentioned below. )
+
+KALMAN.vhdl         :  This file contains the VHDL description of the kalman 
+                       filter model.
+
+kalman.doc          :  This file contains a brief description of the kalman
+                       filter.
+
+test_vectors_KALMAN.vhdl: This file contains the VHDL (translated) test vectors
+		       for KALMAN. In order to simulate it on the Zycad 
+                       ( Version 1.0a) simulator, the model is
+		       instantiated in this file as a component. The test
+		       vectors are statements inside a VHDL process.
+
+test_vectors.doc    :  This is a documentation files on the test vectors,
+
+cmd.inc             :  This is a command file used by the ZYCAD simulator 
+                       ( Version 1.0a) while running the test vectors on any of
+                       the models.
+             
+--------------------------------------------------------------------------
+
+
+******************************************************************************
+
+ RUNNING THE TEST VECTORS ON THE MODELS USING THE ZYCAD SIMULATOR:
+
+******************************************************************************
+
+ **** Running test_vectors on the whole chip ****
+
+ For example, let us try to run the test vectors on the model contained in
+ file "KALMAN.vhdl". This is a model of the whole chip.
+
+    (i) Compile the Pre-defined Functions file by typing 
+          " zvan pack_3.0.vhd"
+   (ii) Compile the VHDL model file by typing 
+          " zvan KALMAN.vhdl"
+  (iii) Compile the VHDL test-vectors file by typing 
+          " zvan test_vectors_KALMAN.vhdl"
+  (iv)  Run the simulation typing 
+           " zvsim -t ns -i cmd.inc E".
+         
+       The simulation output will appear in a file called "run.out".
+       If there are any errors in simulation, "Assert" statements 
+       will appear in this file, mentioning the port at which the 
+       error occurred and the expected value.
+
+
+
+
+

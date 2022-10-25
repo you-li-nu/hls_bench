@@ -1,0 +1,50 @@
+total 1549
+      1024 Jan  7  1991 DATA
+       512 Jul 24 17:18 DOCUMENTATION
+         0 Jul 24 18:34 HLSynth91.list
+      1847 Jul 24 18:16 HLSynth91.readme
+   1261568 Jul 24 18:29 HLSynth91.tar
+    300242 Jul 24 18:34 HLSynth91.tar.Z
+
+HLSynth91/DATA:
+total 1256
+       579 Jan  7  1991 4count.v
+     15048 Jan  7  1991 blit.c
+       959 Jan  7  1991 count_control.vhd
+       712 Jan  7  1991 counter.vhd
+     89497 Jan  7  1991 daiop.sh
+    239063 Jan  7  1991 daior.sh
+    123344 Jan  7  1991 diffeq.sh
+     53662 Jan  7  1991 ecc.sh
+     93933 Jan  7  1991 ellip.sh
+       504 Jan  7  1991 fft.doc
+    231601 Jan  7  1991 frisc.sh
+     44264 Jan  7  1991 gcd.sh
+       424 Jan  7  1991 gcd.v
+       431 Jan  7  1991 gcd.vhd
+       907 Jan  7  1991 gcd_control.vhd
+      4153 Jan  7  1991 i8251.doc
+      8045 Jan  7  1991 i8251.hc
+      9804 Jan  7  1991 i8251.isp
+      4511 Jan  7  1991 kalmanio.isp
+      2649 Jan  7  1991 library.hc
+     12911 Jan  7  1991 mc6502.isp
+     69039 Jan  7  1991 mc68000.isp
+       966 Jan  7  1991 mtlc.v
+     38424 Jan  7  1991 parker.sh
+      1138 Jan  7  1991 pf_control.vhd
+       852 Jan  7  1991 pitch.doc
+      1090 Jan  7  1991 prefetch.v
+       783 Jan  7  1991 prefetch.vhd
+      1265 Jan  7  1991 tlc.vhd
+       810 Jan  7  1991 tlc_control.vhd
+     11959 Jan  7  1991 traffic.sh
+    155350 Jan  7  1991 tseng.sh
+       151 Jan  7  1991 vvectors.vhd
+
+HLSynth91/DOCUMENTATION:
+total 10
+      2275 Jan  7  1991 README
+      1469 Jan  7  1991 bench.doc
+      1282 Jan  7  1991 doc.v
+      2808 Jan  7  1991 readme.stanford

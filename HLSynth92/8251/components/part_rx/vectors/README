@@ -1,0 +1,42 @@
+--------------------------------------------------------------------------------
+--
+--   Intel 8251 Benchmark
+--
+-- Source:  Intel Data Book
+--
+-- VHDL Benchmark author Indraneel Ghosh
+--                       University Of California, Irvine, CA 92717
+--
+-- Developed on April 7, 92
+--
+--------------------------------------------------------------------------------
+
+ This directory contains files and sub-directories that pertain to testing
+ the VHDL model of the 8251.
+
+
+ The 8251 is a quite complicated chip and required many test vectors to 
+ test its functionality. Thus, it was not feasible to put all test vectors 
+ in the same file. So, we have grouped the test vectors together into
+ different files on the basis of the mode of functionality they are testing.
+
+ THIS DIRECTORY HAS THE FOLLOWING FILES :
+
+rx_ext_sync, 	      : These files contain test-vectors for simulating
+rx_int_sync             the SYNCHRONOUS RECEIVE internal and external mode of 
+                        the 8251.
+
+rx_async_1            : This file contains test-vectors for simulating
+                        the ASYNCHRONOUS RECEIVE Mode using 1x baud rate
+                        of the 8251.
+
+rx_async_16x_5,        : These files contain test-vectors for simulating
+rx_async_16x_6           the ASYNCHRONOUS RECEIVE Mode using 16x baud rate
+rx_async_16x_7           (with 5, 6, 7 and 8 bits per character) of the 8251.
+rx_async_16x_8           
+
+rx_async_64x_5,        : These files contain test-vectors for simulating
+rx_async_64x_6           the ASYNCHRONOUS RECEIVE Mode using 64x baud rate
+rx_async_64x_7           (with 5, 6, 7 and 8 bits per character) of the 8251.
+rx_async_64x_8           
+

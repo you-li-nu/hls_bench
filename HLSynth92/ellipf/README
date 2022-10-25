@@ -1,0 +1,49 @@
+------------------------------------------------------------------
+--                                                              --
+--                                                              --
+--            Fifth Order Elliptical Wave Filter                --
+--                                                              --
+--                   D. Sreenivasa Rao                          --
+--         University of California, Irvine, CA, 92717.         --
+--                                                              --
+--                   September 1, 1992                          --
+--                                                              --
+------------------------------------------------------------------
+
+
+This directory contains the files describing the HLS benchmark 
+example, the elliptic wave filter. They are organized as follows : 
+
+  o ellip.vhdl : The VHDL behavioral model for the elliptical
+                 filter.
+
+  o ellip.doc : Describes the elliptic filter in brief.
+
+  o test_vectors.vhdl : A 'test' process built around the VHDL
+                        model of the elliptical filter.
+
+  o test_vectors.doc : A brief document on the test vectors 
+                       described in "test_vectors.vhdl".
+
+  o cmd.inc : Simulation command file for running the test vectors
+              on the Zycad simulator.
+
+
+*****************************************************************
+   To run the test vectors for elliptic filter 
+*****************************************************************
+
+
+     (a) Compile the three VHDL files -- bit_functions.vhdl, ellip.vhdl
+         and test_vectors.vhdl -- by invoking the command
+                  zvan <vhdl file name with extension>
+
+     (b) Run the simulation using the command 
+                  zvsim -t ns -i cmd.inc E
+
+   The simulation output will appear in a file called "run.out".
+   If there are any errors in simulation, "Assert" statements
+   will appear in this file, mentioning the port at which the
+   error occurred and the expected value.
+
+

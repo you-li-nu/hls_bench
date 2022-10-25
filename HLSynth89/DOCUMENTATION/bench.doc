@@ -1,0 +1,34 @@
+
+BENCHMARK DOCUMENTATION, as of March 16, 1989
+
+    Below is a list of the benchmarks for the 1989 High-Level Synthesis 
+    Workshop.  I encourage comments on the benchmarks, and hope that 
+    participants will be able to run most of these benchmarks to provide 
+    comparisons with other systems.
+
+    The benchmarks are currently being developed, and will change over
+    time.  Bruce Irvin is currently converting some of them to VHDL.
+
+    The benchmarks are:
+
+	Processors:
+	    mc6502 (ISP description)
+	    mc68000 (ISP description)
+
+	Peripheral/glue chips:
+	    i8251 (ISP description, Hardware C description)
+	    Amiga BLIT chip (C description)
+
+	DSP chips:
+	    fft (paper description only)
+	    pitch extraction (paper description only)
+	    kalman filter (ISP description)
+
+	Small examples:
+	    Traffic light controller (V & VHDL descriptions)
+	    GCD (V & VHDL descriptions)
+	    Counter (V & VHDL descriptions)
+	    Prefetch (V & VHDL descriptions)
+
+
+

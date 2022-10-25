@@ -1,0 +1,69 @@
+--------------------------------------------------------------------------
+
+  BENCHMARK : Greatest Common Divisior
+
+  Developed on Aug 15, 1992 by :
+                                Ted Lee,
+                                CADLAB,
+                                Univ. of Calif. , Irvine.
+
+  Modified by Sept 15, 1992 by :
+                                Champaka Ramachandran
+                                Univ. of Calif. , Irvine.
+
+--------------------------------------------------------------------------
+
+THIS DIRECTORY HAS THE FOLLOWING FILES :
+
+
+gcd.doc             :  This file contains a brief description of the gcd
+                       chip.
+
+gcd.vhdl            :  This file contains the VHDL model of gcd in this example.
+
+pack_2.0.vhdl       :  This file contains VHDL functions
+
+test_vectors.vhdl   :  This file contains the VHDL (translated) test vectors
+		       for the model of gcd. In order to simulate it on
+		       the Zycad ( Version 1.0a) simulator, the model is
+		       instantiated in this file as a component. The test
+		       vectors are statements inside a VHDL process.
+
+
+test_vectors.doc    :  This file contains the description of the testing scheme
+
+cmd.inc             :  This is a command file used by the ZYCAD simulator 
+                       ( Version 1.0a) while running the test vectors on any of
+                       the models.
+             
+--------------------------------------------------------------------------
+
+******************************************************************************
+
+ RUNNING THE TEST VECTORS ON THE MODELS USING THE ZYCAD SIMULATOR:
+
+******************************************************************************
+
+ **** Running test_vectors on the whole chip ****
+
+ For example, let us try to run the test vectors on the model contained in
+ file "GCD.vhdl". This is a model of the whole chip.
+
+   (i) Compile the Pre-defined Functions file by typing 
+          " zvan pack_2.0.vhd"
+  (ii) Compile the VHDL model file by typing 
+          " zvan GCD.vhdl"
+ (iii) Compile the VHDL test-vectors file by typing 
+         " zvan test_vectors_GCD.vhdl"
+ (iv)  Run the simulation typing 
+           " zvsim -t ns -i cmd.inc E".
+         
+  The simulation output will appear in a file called "run.out".
+  If there are any errors in simulation, "Assert" statements 
+  will appear in this file, mentioning the port at which the 
+  error occurred and the expected value.
+
+
+
+
+

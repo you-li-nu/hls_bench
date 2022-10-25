@@ -1,0 +1,31 @@
+--------------------------------------------------------------------------------
+--
+--   Intel 8251 Benchmark
+--
+-- Source:  Intel Data Book
+--
+-- VHDL Benchmark author Indraneel Ghosh
+--                       University Of California, Irvine, CA 92717
+--
+-- Developed on April 7, 92
+--
+--------------------------------------------------------------------------------
+
+
+ This directory contains instantiated models for the three main constituent
+ "VHDL processes" ("main", "receiver" and "transmitter") in our VHDL model of
+ the 8251 USART (which is in file "8251.vhd.
+
+ It also contains test vectors for testing those "constituent processes".
+
+ THIS DIRECTORY HAS THE FOLLOWING SUB-DIRECTORIES :
+
+ part_main : This sub-directory contains instantiated models and test vectors
+	     for the "main" VHDL process in the model of the 8251 USART.
+
+ part_tx   : This sub-directory contains instantiated models and test vectors
+             for the "transmitter" VHDL process in the model of the 8251 USART.
+
+ part_rx   : This sub-directory contains instantiated models and test vectors
+	     for the "receiver" VHDL process in the model of the 8251 USART.
+

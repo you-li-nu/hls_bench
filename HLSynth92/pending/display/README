@@ -1,0 +1,54 @@
+
+
+		DISPLAY Benchmark for High-Level Synthesis
+		==========================================
+
+               Michael Pilsl, Siemens AG, Munich, Germany
+                       (pilsl@sabine.zfe.siemens.de)
+           Subhrajit Bhattacharya, Duke University, Durham, NC
+                       (sb@cs.duke.edu, sb@mcnc.org)
+             Franc Brglez, MCNC, Research Triangle Park, NC
+                            (brglez@mcnc.org)
+
+This directory contains the design files for the DISPLAY chip.
+
+The DISPLAY chip is a driver for four seven-segment LED displays.
+The display units display ten minutes, minutes, ten seconds and
+seconds. After reaching 59 59, they reset on the next clock to 
+00 00.
+
+A description of the files in this directory follows.
+
+- "gcd.vhdl"
+        contains the vhdl description of the function of the
+        chip.
+
+- "gcd_stim.vhdl"
+        contains the vhdl description needed for 
+        simulation of the design.
+
+- "waves.ps"
+        contains the waveforms resulting from simulating the
+        scheduled vhdl description. When the signal consists
+        of a more than one bit, then the value (decimal) is indicated
+        between parallel lines whenever possible. The file is
+	in postscript.
+
+- "gcd.io"
+        this file is a more english like description of
+        the inputs and the way the outputs change with
+        the inputs. A ".I" indicates an input and a ".O"
+        indicates an output. A ".clock 7" implies, the design
+	should be clocked 7 times. Note that the
+	"WAIT UNTIL clk = '1'; EXIT RESET_LOOP WHEN reset = '1';"
+	statement in the VHDL description implements the loop
+	in one clock cycle.
+
+Additional information about this benchmark and a new data point at
+register-, gate- and transistor-level for this design can be obtained from
+
+Subhrajit Bhattacharya, Franc Brglez and Michael Pilsl,
+"Synthesis for Testability from Behavioral Specifications:
+Benchmarking  the Scheduling Strategies",
+MCNC Technical Report, June 1993.
+

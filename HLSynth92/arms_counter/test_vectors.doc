@@ -1,0 +1,50 @@
+--------------------------------------------------------------------------------
+--
+--   Controller Counter Benchmark
+--
+-- Model Source: Chip Level modelling with VHDL by Jim Armstrong
+--
+-- Testpattern Source : Sanjiv Narayan And Frank Vahid
+--                      University of California, Irvine.
+--
+-- author: Champaka Ramachandran
+--         University Of California, Irvine, CA 92717
+--         champaka@balboa.eng.uci.edu
+-- 
+-- Written on Aug24th 1992
+--
+--------------------------------------------------------------------------------
+
+
+
+
+  The testing strategy consists of running a clock process and a 
+  counter testing process.
+
+  TEST 1 starts off with simple test of reset, load limit to 2 and count up.
+  A check is done so that the counter does not increment when the limit
+  is hit, eventhough countup signal is enabled.
+
+  It should not count down either, since we cannot determine the direction 
+  of the previous count and from which direction the limit was hit.
+  When the limit is changed to 0, counting down from 2 can resume.      
+
+  TEST2 perform some extensive testing of the counter's limit handling.
+  The limits is initially set to 13, the counter is cleared and then 
+  set to count up. Once the counter hits the limit, the limit is changed
+  to 15 and counting is resumed.
+
+  Once the limit of 15 is hit, the limit is changed to 7 and counting down
+  is started. When the limit of 7 is reached, the counter stops counting 
+  and only when the limit is reset to 0 does counting down resume.
+      
+  TEST3 tries to perform counting beyond the range, i.e. above 15 and below 0.
+  The counter is cleared and the limit set to 7. It is counted up by 1 and counted
+  down by 1 two times. In the set count down, the counter wraps around from a 0
+  to a 15. Now a count up is down at 15 and the counter again wraps around
+  to 0.
+
+  TEST4 completely tests the counting sequence. It counts from 0 all the way to 15.
+  It then counts down from 15 to 0.
+
+

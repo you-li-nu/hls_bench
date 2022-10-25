@@ -1,0 +1,24 @@
+	README file for designs with complete information
+	-------------------------------------------------
+
+Author: Preeti R. Panda
+Last Modified: 25 Jan 95
+
+
+The following design examples are available in this directory :
+
+adaptive	- Adaptive Interpolator (Silage)
+
+barcode		- Barcode Reader (VHDL)
+
+fp_add		- Floating point adder (VHDL)
+
+fp_divider	- Floating point divider (VHDL)
+
+fp_mult		- Floating point multiplier (VHDL)
+
+prawn		- 8-bit, 40 instruction CPU (VHDL)
+
+qrs		- ECG Application chip(VHDL)
+
+rtpc		- 8-bit, 119 instruction CPU (VHDL)

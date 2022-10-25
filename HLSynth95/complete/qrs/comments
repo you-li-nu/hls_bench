@@ -1,0 +1,18 @@
+This benchmark describes a chip used for monitoring heart-rate in ECG
+applications. Its called the QRS chip, since it detects some points called
+Q-R-S points in the ECG data stream. Three different descriptions of the
+same chip are given, one algorithmic, one in hte form of a state machine,
+and another simply called the system description. The authors claim that the
+same functionality is expressed by all three descriotions, and this has been
+confirmed after extensive simulation. However, there is no english or other
+hi-level description of what exactly that functionality is. It is obviously
+quite a computation-intensive algorithm, as is evident form the VHDL code. 
+Some suitable hi-level description, in English for instance, is necessary.
+
+For simulation, they have included a stimulation file as well as two files
+with input data. A file that contains the correct expected output is also
+included. However, instructions on how to compare the obtained output of
+simulation and the expected output are not included. The output file that I
+obtained from running the simulator has less  than 5000 lines, while the
+reference file contains about 8,500 lines. 
+

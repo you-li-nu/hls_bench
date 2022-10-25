@@ -1,0 +1,53 @@
+--------------------------------------------------------------------------
+
+  BENCHMARK : Radix-512 Divider
+
+  Developed on Jan 28, 1994 by :
+                                Alberto Nannarelli
+                                Univ. of Calif. , Irvine.
+                                e-mail : anannare.ece.uci.edu
+
+--------------------------------------------------------------------------
+
+THIS DIRECTORY HAS THE FOLLOWING FILES :
+
+
+README              :  The file you are reading.
+
+radix512.doc        :  This file contains a brief description of the 
+                       division algorithm.
+
+radix512.vhdl       :  This file contains the VHDL model of the divisor
+
+pack.vhdl           :  This file contains VHDL functions
+
+test_vectors.vhdl   :  This file contains the VHDL test vectors for the model
+                       above.
+
+test_vectors.doc    :  This file contains the description of the testing scheme
+
+cmd.inc             :  This is a command file used by the SYNOPSYS simulator 
+
+makefile            :  This is a makefile file to compile the VHDL model.
+             
+--------------------------------------------------------------------------
+
+******************************************************************************
+
+ RUNNING THE TEST VECTORS ON THE MODELS USING THE SYNOPSYS SIMULATOR:
+
+******************************************************************************
+
+ For example, let us try to run the test vectors on the model contained in
+ file "radix512.vhdl". This is a model of the whole chip.
+
+ -  Compile the VHDL package by typing 
+    " make "
+
+ -  Run the simulation typing 
+    " vhdlsim -t ns -i cmd.inc E ".
+         
+ The simulation output will appear in a file called "run.out".  If there 
+ are any errors in simulation, "Assert" statements will appear in this 
+ file, mentioning the port at which the error occurred and the expected 
+ value.

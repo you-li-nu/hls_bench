@@ -1,0 +1,28 @@
+--------------------------------------------------------------------------
+
+  BENCHMARK       : Differential Equation Solver
+
+  Model Source    : P. G. Paulin, J. P. Knight, E. F. Girczyc:
+                    "HAL: A multi-paradigm approach to automatic data path synthesis"
+                    in Proc. 23rd IEEE Design Automation Conf, Las Vegas, NV, pp. 263-270,
+                    July 1986.
+
+  Testpattern Source : Rajesh Gupta, Stanford University , July 10 1990
+
+  Developed on Aug 17 1992 by : Champaka Ramachandran
+                                Univ. of Calif. , Irvine.
+                                champaka@balboa.eng.uci.edu
+
+--------------------------------------------------------------------------
+
+This vhdl behaviour is the hardware description for a small fixed-point 
+calculation loop. The algorithm tries to numerically solve the equation
+
+        y'' + 3xy' + 3y = 0
+
+Here, u is assumed to represent dy/dx or y'. dx is approximated as x1 - x.
+Similarly, dy = y1 - y and du = u1 - u.  The value 'a' provides the number
+of times the numerical loop is executed. u1, x1 and y1 represent the new
+values of u, x and y. Thus, x1 = x + dx, y1 = udx + y, u1 = u - 3xudx - 3ydx.
+The behavior executes by loading the initial values of x, y, u, dx, and a.
+

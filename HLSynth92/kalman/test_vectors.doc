@@ -1,0 +1,223 @@
+----------------------------------------------------------------------------------
+--   Kalman Filter Benchmark
+--
+-- Source:  The model, test patterns and part of the documentation
+--          were obtained from Cleland O Newton at DRA Malvern, UK.
+--
+-- author: Champaka Ramachandran
+--         University Of California, Irvine, CA 92717
+--         champaka@balboa.eng.uci.edu
+--
+-- Written on Aug 24th, 92
+--
+----------------------------------------------------------------------------------
+
+Testing Strategy :
+------------------
+
+At the start of the testing process, the matrices A, G and K are loaded.
+All the input data is shown in integer, as it is easy to comprehend. 
+Since, the model needs a bit vector, conversion is done at the outset.
+
+Part 1
+------
+Initialization is done so that, no data is written onto any unwanted 
+adresses.
+
+  Addr <= 0;
+  Cexec <= '0';
+  Vector_type <= "000";
+
+
+Part 2
+------
+We have made use of the fact that A is upper diagonal and sparse. So, we 
+need to compute only the non-zero values. 
+The vector type indicates that Matrix A is being loaded. Address indicates
+the matrix entry. 
+
+  Vector_type <= "001";
+
+  i := 0;
+  while (i < 16) loop
+    j := 0;
+    while (j < 16) loop
+
+      if (i = j) then
+        Input_Vector <= SIGNED_INT_TO_BIN(-900, 16);
+      else
+        if (j - 9 = i) then
+          Input_Vector <= SIGNED_INT_TO_BIN(10, 16);
+        else
+          Input_Vector <= SIGNED_INT_TO_BIN(0, 16);
+        end if;
+      end if;
+
+      Addr <= i * 16 + j;
+      wait for 1 ns;
+
+      j := j + 1;
+    end loop;
+    i := i + 1;
+  end loop;
+
+
+Part 3
+------
+
+In the case of matrix K, Almost all values are same except the diagonal element 
+and some zero occurances. The vector type indicates that matrix K is being set.
+
+  Vector_type <= "010";
+
+  i := 0;
+  while (i < 16) loop
+    j := 0;
+    while (j < 16) loop
+
+      if (i = j) and (j < 13) then
+        Input_Vector <= SIGNED_INT_TO_BIN(75, 16);
+      else
+        if (i >= 13) and (i - 13 = j) then
+          Input_Vector <= SIGNED_INT_TO_BIN(75, 16);
+        else
+          if (j < 13) then
+            Input_Vector <= SIGNED_INT_TO_BIN(67, 16);
+          else
+            Input_Vector <= SIGNED_INT_TO_BIN(0, 16);
+          end if;
+        end if;
+      end if;
+
+      Addr <= i * 16 + j;
+      wait for 1 ns;
+
+      j := j + 1;
+    end loop;
+    i := i + 1;
+  end loop;
+
+Part 4
+------
+
+In the case of matrix G, most of the entries are same except some anomalies. 
+
+
+  Vector_type <= "011";
+
+  i := 0;
+  while (i < 4) loop
+    j := 0;
+    while (j < 16) loop
+
+      Input_Vector <= SIGNED_INT_TO_BIN(358, 16);
+      if (i = 0) and (j = 0) then
+        Input_Vector <= SIGNED_INT_TO_BIN(328, 16);
+      end if;
+
+      if (i = 1) and (j = 5) then
+        Input_Vector <= SIGNED_INT_TO_BIN(328, 16);
+      end if;
+ 
+      if (i = 2) and (j = 9) then
+        Input_Vector <= SIGNED_INT_TO_BIN(328, 16);
+      end if;
+
+      if (i = 3) and (j = 12) then
+        Input_Vector <= SIGNED_INT_TO_BIN(328, 16);
+      end if;
+
+      Addr <= i * 16 + j;
+      wait for 1 ns;
+
+      j := j + 1;
+    end loop;
+    i := i + 1;
+  end loop;
+
+
+Part 5
+------
+There exists 2 types of test sequences. Four different run of test vectors was
+followed by a run of four identical inputs. This is done to demonstrate the
+convergence of the state vector estimation process. The output values are seen
+to match the input values at indices 1 to 4, for the given set of values on the
+input matrices.  An example for setting input vector Y is shown 
+
+
+--
+-- Pattern #1  Setting Input Y (1)
+-- 
+
+  Vector_type <= "100";
+
+  Input_Vector <= SIGNED_INT_TO_BIN(501, 16);
+  Addr <= 0;
+  wait for 1 ns; 
+
+  Input_Vector <= SIGNED_INT_TO_BIN(550, 16);
+  Addr <= 1;
+  wait for 1 ns; 
+
+  Input_Vector <= SIGNED_INT_TO_BIN(504, 16);
+  Addr <= 2;
+  wait for 1 ns; 
+
+  Input_Vector <= SIGNED_INT_TO_BIN(-500, 16);
+  Addr <= 3;
+  wait for 1 ns; 
+
+  Input_Vector <= SIGNED_INT_TO_BIN(451, 16);
+  Addr <= 4;
+  wait for 1 ns; 
+
+  Input_Vector <= SIGNED_INT_TO_BIN(650, 16);
+  Addr <= 5;
+  wait for 1 ns; 
+ 
+  Input_Vector <= SIGNED_INT_TO_BIN(515, 16);
+  Addr <= 6;
+  wait for 1 ns; 
+
+  Input_Vector <= SIGNED_INT_TO_BIN(-481, 16);
+  Addr <= 7;
+  wait for 1 ns; 
+
+  Input_Vector <= SIGNED_INT_TO_BIN(-541, 16);
+  Addr <= 8;
+  wait for 1 ns; 
+
+  Input_Vector <= SIGNED_INT_TO_BIN(410, 16);
+  Addr <= 9;
+  wait for 1 ns; 
+
+  Input_Vector <= SIGNED_INT_TO_BIN(520, 16);
+  Addr <= 10;
+  wait for 1 ns; 
+
+  Input_Vector <= SIGNED_INT_TO_BIN(421, 16);
+  Addr <= 11;
+  wait for 1 ns; 
+
+  Input_Vector <= SIGNED_INT_TO_BIN(-491, 16);
+  Addr <= 12;
+  wait for 1 ns; 
+
+  Cexec <= '1';
+  wait for 1 ns; 
+
+
+Part 6
+------
+
+  This part consists of sanity check vectors. We test for all inputs
+  being positive, all being negative, and some being positive and negative.
+
+  We then vary the size of the inputs starting from order 1 to order 10, order 100
+  and order 1000. 
+
+  The next test is to intermingle different order inputs among the different
+  inputs of Y. This test is carried out on all postive, all negative and some
+  positive- negative inputs.
+
+  The final test alternates postive and negative inputs among order 10, 100 and 1000

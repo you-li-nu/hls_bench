@@ -1,0 +1,156 @@
+
+		HLSW 92 benchmarks top-level README file
+		----------------------------------------
+
+		Coordinator:	Nik Dutt, U.C. Irvine
+				dutt@ics.uci.edu
+
+		Last Updated:	Sept 17, 1992
+		First Created:	April 9, 1992
+
+		Major changes since April 9 92:
+			
+			o several new examples have been added.
+			o the files README (this one) and GUIDELINES
+				have been updated.
+
+---------------------------------------------------------------------------
+
+This directory has the following FILES :
+
+GUIDELINES	    :   Guidelines for benchmark submission.
+
+README              :   This file explains the contents of the HLSW92 
+                        benchmarks and gives a brief description of
+                        the individual benchmarks.
+
+---------------------------------------------------------------------------
+
+The following benchmark examples are available in this directory :
+
+2901                :   VHDL Benchmarks for the Am2901 microprocessor slice.
+
+2910                :   VHDL Benchmarks for the Am2910 microprogram address 
+                        sequencer.
+
+8251                :   VHDL Benchmarks for the Intel 8251 USART
+
+kalman              :   VHDL Benchmarks for the Kalman Filter
+
+diffeq              :   VHDL Benchmark for a differential equation solver, also
+                        known as the HAL example
+
+tlc                 :   VHDL Benchmark of a traffic light controller
+
+gcd                 :   VHDL Benchmark of the Greatest common divisor algorithm
+
+ellipf              :   VHDL Benchmark of the fifth order elliptic filter
+
+arms_counter        :   VHDL Benchmark of a controlled counter adapted from Jim 
+                        	Armstrong's book.
+
+
+       Developed on Sept 17, 1992 by :
+
+                                     Champaka Ramachandran
+                                     Univ. of California, 
+                                     Irvine.
+              
+---------------------------------------------------------------------------
+
+NOTE :
+
+For gcd, tlc, ellipf, arms_counter, kalman and diffeq we have used the 
+BIT_VECTOR data type which is the standard 2-valued logic.
+
+However, for the 2901, 2910 and 8251, we needed a 'Z' value to model the
+behaviors. Hence, we used a data-type called MVL7.  The data type and the 
+accompanying functions are available as public domain software.
+
+---------------------------------------------------------------------------
+
+
+
+
+************************************************************************
+A brief overview of the significance of the benchmarks and the number of
+testpatterns is described below :
+************************************************************************
+
+--------------------------------------------------------------------------
+
+Benchmark name              Characteristics              Number of vectors 
+			(VHDL style, constructs)
+--------------------------------------------------------------------------
+
+                 Combined Functional/Alg behav                 
+8251                                                            > 20000
+            3 processes and 2 blocks with nested Ifs, Case 
+                          and loops 
+
+--------------------------------------------------------------------------
+
+         (a) Alg. behav  (b) Combined Functional/Alg Behav.     
+2901         1 process       5 blocks                             216
+
+                    Each model with Ifs, Case
+
+--------------------------------------------------------------------------
+
+         (a) Alg. behav  (b) Combined Functional/Alg Behav.     
+2910         1 process       5 blocks                             635
+
+                Each model with nested Ifs, Case 
+
+--------------------------------------------------------------------------
+
+                          FSM behav                 
+tlc                                                                23
+                 1 process with nested Case and Ifs        
+
+--------------------------------------------------------------------------
+       
+                       Algorithmic Behavior
+diffeq                                                             57
+            1 process with Embedded loop and St.Line code
+
+--------------------------------------------------------------------------
+
+                       Algorithmic Behavior
+gcd                                                                24
+              1 process with nested Ifs and Loops
+
+--------------------------------------------------------------------------
+
+                       Algorithmic Behavior
+kalman                                                             30
+                1 process with nested Ifs and Loops
+
+--------------------------------------------------------------------------
+
+                       Algorithmic Behavior
+arms_counter                                                       55
+                     4 processes with nested Ifs
+
+--------------------------------------------------------------------------
+
+                       Algorithmic Behavior
+ellipf                                                             6
+            1 process with Embedded loop and St.Line code
+
+--------------------------------------------------------------------------
+__________________________________________________________________________
+
+ADDENDUM:
+========
+
+	A number of new High Level Synthesis benchmarks have been added to
+the existing HLSynth92 benchmark suite. Pending the approval of Prof. N.
+Dutt, the HLSynth92 Benchmark Co-ordinator, these benchmarks have been
+tentatively placed in the "HLSynth92/pending/" directory.
+
+June 14, 1993						Maitreya Sengupta
+						     Benchmark Administrator
+							     M C N C
+							(sengupta@mcnc.org)
+___________________________________________________________________________

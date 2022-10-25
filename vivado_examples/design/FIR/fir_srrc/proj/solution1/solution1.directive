@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AutoPilot:ProjectResources xmlns:AutoPilot="com.autoesl.autopilot.ui.directiveView">
+  <sourceFile>
+    <directive functionName="fir_top" label="" functionLabel="">
+      <pragma name="INTERFACE">
+        <option name="ap_fifo" value=" " positionalBoolean="mode"/>
+        <option name="port" value="din" positionalBoolean="4"/>
+      </pragma>
+    </directive>
+    <directive functionName="fir_top" label="" functionLabel="">
+      <pragma name="INTERFACE">
+        <option name="ap_fifo" value=" " positionalBoolean="mode"/>
+        <option name="port" value="dout" positionalBoolean="4"/>
+      </pragma>
+    </directive>
+    <directive functionName="fir_top" label="" functionLabel="">
+      <pragma name="DATAFLOW"/>
+    </directive>
+  </sourceFile>
+</AutoPilot:ProjectResources>

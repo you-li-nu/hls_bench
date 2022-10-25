@@ -1,0 +1,140 @@
+--------------------------------------------------------------------------------
+--
+--   Intel 8251 Benchmark
+--
+-- Source:  Intel Data Book
+--
+-- VHDL Benchmark author Indraneel Ghosh
+--                       University Of California, Irvine, CA 92717
+--
+-- Developed on April 7, 92
+--
+--------------------------------------------------------------------------------
+
+TESTING THE 8251 MODEL
+
+ OVERALL TESTING STRATEGY 
+
+ In testing the functionality of the "main" process, we mainly 
+ concentrate on testing its main operational modes :
+
+ (1) Write various mode words into the "main" process and monitor the
+     values of global signals computed by it.
+
+ (2) Write SYNC characters (both Single-Sync and Double-Sync) into the
+     "main" process and test whether they are correctly stored.
+
+ (3) Write different Command words into the "main" process and monitor
+     the execution of commands like internal reset, error reset etc.
+
+ (4) Write data for transmission into the "main" process
+
+ (5) Read received data from the "main" process
+
+ (6) Read status from the "main" process
+
+--------------------------------------------------------------------------
+
+FORMAT OF TEST-VECTORS IN "*.bits" FILE ( "bit_format" )
+
+ In this file, the test vectors for the "main" process of the 8251
+ USART are stored in a format known as the"bit_format". These test vectors
+ can be very easily converted to other HDL formats. I have a C program that
+ converts them into VHDL format.
+
+ The "bit_format" has the following characteristics :
+
+ 1) This file is line-oriented and there are three types of lines :-
+     
+      [a] Port Description Lines
+      [b] Actual Test Vector Lines
+      [c] Comment Lines.
+
+ 2) All comment lines (Type [c]) begin with a star (*). While translating
+    these test vectors into some HDL format (e.g. VHDL), the initial comment 
+    lines are ignored. All other comment lines are copied verbatim into the 
+    HDL file.
+
+ 3) In lines of Types [a] and [b], the line has many fields corresponding to
+    ports of the entity being tested. A colon (:) acts as a field-separator 
+    between ports ( We will call it a port separator). Each such line must 
+    end with a colon.
+
+ 4) There are three Port Description Lines ( Type [a] ). These lines come
+    just after the initial comment lines ( of Type [c] ). The three lines
+    (in the following order) are :-
+
+      {I} Port Name Line : This line specifies the names of all ports of the
+                           entity being tested. Port names are separated by a
+                           colon. 
+                           
+                           The order in which the port names are specified is 
+                           significant. In all other lines of Type [a] and [b],
+			   information pertaining to specific ports must appear
+			   in the same order with a colon as a port-separator.
+
+			   All input ports are mentioned first, followed by
+                           the output ports. Inout ports are mentioned both
+                           as input as well as output ports.
+	   
+      {II} Port Direction Line : This line specifies the directions ( in, out,
+       				 inout ) of the ports mentioned in the Port
+           			 Name Line ( Line {I} ).
+                           
+      {III} Port Type Line : This line is related to the data type ( e.g. 
+			     bit, bit-vector, integer etc.) of the ports 
+                             mentioned in the Port Name Line ( Line {I} ).
+			     This line is very specific to VHDL data type
+			     declaration syntax and may not be relevant to
+			     other HDL's. 
+
+ 5) The Actual Test Vector Lines (Type [b] ) contain the test vectors for the
+    8251. 
+
+    Each test vector line is equivalent to one clock cycle. 
+
+    Values corresponding to ports are written in the exact order in which
+    port names are mentioned in the Port Name Line ( Type [a], Line {I} ).
+    In case we dont want to mention any value for a particular port in that
+    line, we put in one or more dashes ( - ) in that position corresponding 
+    to that port. Values are separated by the colon as a port-separator.
+
+    Values in the input-port positions in Type [b] lines are assigned to the
+    corresponding input port. Only the "clocking" is implicit in the
+    translation process for each test vector and the clock ( "clk")
+    is not specifically mentioned among the input ports. 
+
+    Values in the output-port positions in Type [b] lines are compared to the
+    actual output values appearing at the corresponding output ports when we
+    run the simulation. If these two values dont match, then an "Assert" 
+    statement is generated to show that an error has been detected.
+
+--------------------------------------------------------------------------
+
+HOW TO ADD MORE TEST VECTORS
+
+    More test vectors can be easily added simply by entering more lines in
+    "bit_format" to the end of the file. These lines must be "Actual Test 
+    Vector Lines ( Type [b] )". 
+
+    "Comment Lines ( Type [c] )" may also be added, but those will not have
+    any effect on simulation.
+
+--------------------------------------------------------------------------
+
+TRANSLATION FROM "bit_format" TO VHDL.
+
+ In this directory, I have a C program called "trans_main.c" that does this 
+ translation.
+
+ The following steps can be followed :-
+
+  (i) Compile the translator file.
+          "cc trans_main.c -o trans_main"
+
+  (ii) Run the translation program by specifying an input and an output file.
+          "trans_main sytx.bits sytx.vhdl"
+       This program accepts test vectors in "bit_format" from an input file
+       (for example) "sytx.bits" and produces test vectors in VHDL format in
+       output file "sytx.vhdl"
+

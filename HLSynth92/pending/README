@@ -1,0 +1,40 @@
+
+====================== file: HLSynth92/pending/README =======================
+
+This directory contains 7 new design benchmarks, submitted for addition to
+the HLSynth92 benchmark set. These are placed in the following sub-
+directories :
+
+      barcode/        falsepath/      gcd_alt/            qrs/
+      display/          fancy/        highway/ 
+
+These benchmarks are being reviewed and simulated independently by the
+current HLSW92 Benchmark Chair Prof. Nikil Dutt from UC Irvine. The new 
+benchmarks occupy less than 1000 Kbytes of disk space, combined. All designs
+are described at the behavioral level in VHDL. Users should be able to compile
+and simulate these VHDL files with any simulator compatible  with the VHDL
+1076 standard. All designs represent a good mix of behavioral descriptions
+with progressively complex control structures and data path components. The
+first set of data points for these designs, synthesized at the register-,
+the gate- and the transistor layout-level has been published in [1], while
+the newer set of data points using the currently "frozen" descriptions of
+benchmarks can be found in [2].
+
+Each benchmark sub-directory contains an individual README file, explaining
+the nature and content of each file included in that particular sub-directory.
+
+
+References:
+----------
+
+[1] M. Pilsl, S. Bhattacharya, and F. Brglez, "Synthesizing Behavioral    
+    Benchmarks in VHDL into Standard Cell Layout", In Proceedings of 6th    
+    International Workshop on High Level Synthesis, Dana Point, California,    
+    USA, November 3-6, 1992. 
+
+[2] S. Bhattacharya, F. Brglez, and M. Pilsl, "Synthesis for Testability
+    from Behavioral Specifications: Benchmarking the Scheduling Strategies",
+    MCNC Technical Report, June 1993.
+
+
+============================================================================

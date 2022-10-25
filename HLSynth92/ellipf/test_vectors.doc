@@ -1,0 +1,39 @@
+
+-------------------------------------------------------
+--                                                   
+--               TESTING STRATEGY                   
+--                                                 
+-- Author : D. Sreenivasa Rao 
+--          University of california, IRvine, CA, 92717.
+--          dsr@balboa.eng.uci.edu, (714)856-5106.
+--
+-- Written 12 September, 1992.
+--
+-------------------------------------------------------
+
+The behavior of the elliptic filter can be tested by applying 
+a set of test patterns that are fairly sufficient to perform
+a "sanity check" on the various operators of the filter. In
+case of digital filters, any input (along with a set of current
+state vectors) will exercise all the operations of the filter
+(since there are no conditional branches in the design). However,
+a few different test patterns will exercise the design more 
+thoroughly, and we have presented in the file "test_vectors.vhdl"
+a handful of such test vectors. The vectors were derived heuristically,
+according to standard practices used in such cases. We consider
+vectors that are all similar (say all 0's and all 1's), vectors that
+have different combinations of even and odd numbers as current state 
+vectors, and vectors that are powers of 2.        
+
+The functional testing of the elliptic filter is usually done
+witha  'delta' function, the rough approximation of which in the 
+digital domain is a vector that is '1' in the first instance, and is 
+'0' for all other states. The corresponding output has to be tested
+by substituting the vector in the z-transform of the state equation.
+This is represented by Pattern #1, followed by Patterns 2, 3, and 4.
+
+
+
+  
+
+

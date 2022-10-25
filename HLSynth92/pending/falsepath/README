@@ -1,0 +1,49 @@
+
+
+		FALSE_PATH Benchmark for High-Level Synthesis
+		=============================================
+
+               Michael Pilsl, Siemens AG, Munich, Germany
+                       (pilsl@sabine.zfe.siemens.de)
+           Subhrajit Bhattacharya, Duke University, Durham, NC
+                       (sb@cs.duke.edu, sb@mcnc.org)
+             Franc Brglez, MCNC, Research Triangle Park, NC
+                            (brglez@mcnc.org)
+
+This directory contains the design files for the FALSEPATH chip.
+The falsepath chip is an address calculation chip. Its has false
+paths in the flowgraph level. Refer to Bergamaschi paper [1].
+
+A description of the files in the directory follows.
+
+- "falsepath.vhdl" 
+    contains the description of the falsepath example
+    as well as a package with data type declarations and a conversion
+    function. Though, the VHDL description is based on VHDL standard types
+    only, a conversion function from integer to bit_vector must be
+    included, since VHDL does not support conversions between the standard
+    data types. Thus, it might be necessary to adopt this conversion
+    function for a specific synthesis system.
+
+- "falsepath_stim.vhdl"
+    contains the simulation environment. The output of the falsepath
+    component is automatically checked for correctness.
+    
+- "waves.ps"
+    This postscript file shows the wave forms of the input and output
+    signals obtained by the VHDL simulator.
+
+- "falsepath.io"
+        this file is a more english like description of
+        the inputs and the way the outputs change with
+        the inputs. A ".I" indicates an input and a ".O"
+        indicates an output. 
+
+Additional information about this benchmark and a new data point at
+register-, gate- and transistor-level for this design can be obtained from
+
+Subhrajit Bhattacharya, Franc Brglez and Michael Pilsl,
+"Synthesis for Testability from Behavioral Specifications:
+Benchmarking  the Scheduling Strategies",
+MCNC Technical Report, June 1993.
+

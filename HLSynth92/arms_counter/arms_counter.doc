@@ -1,0 +1,69 @@
+--------------------------------------------------------------------------------
+--
+--   Controller Counter Benchmark
+--
+-- Model Source: Chip Level modelling with VHDL by Jim Armstrong
+--
+-- Testpattern Source : Sanjiv Narayan And Frank Vahid
+--                      University of California, Irvine.
+--
+-- author: Champaka Ramachandran
+--         University Of California, Irvine, CA 92717
+--         champaka@balboa.eng.uci.edu
+-- 
+-- Written on Aug24th 1992
+--
+--------------------------------------------------------------------------------
+
+-----------------
+Functionality :
+-----------------
+
+The Armstrong counter counts up or down and the counting is stops when
+limits are reached. It operates with the Clock and Strobe signals acting
+as triggers. The signal CON termines the operation mode of the counter.
+
+When CON=00, the counter is being cleared. When CON=01, the Limit gets 
+loaded. When CON=10 a count up is performed. When CON=11 a count down is 
+performed.
+
+The counting is done when a positive edge of clock is observed. The decoding
+is perfomed on the postive edge of the strobe signal and the limit is loaded 
+on a negative edge of Strobe signal.
+
+Counting up or down is done only if the count enable or the CNTE signal is
+high. This in turn is set by the rising edge of EN. EN is the signal which
+determines if the counter has reached the limit value.  The signal EN is
+changed either when the value CNT changes and the limit has to be checked,
+or the direction of counting has been changed and the ENIT signal is enabled.
+
+The ENIT signal determines that the decoder has been executed and the direction
+of counting is likely to have changed. The ENIT signal is then reset after 
+EN has been enabled back in the decoder by the RENIT signal. 
+
+In case the counter reaches the limit, further counting is disabled till a 
+new limit is loaded or the counter is cleared.
+
+----------
+Anomalies :
+----------
+
+The model does not support the behaviour of the counter under these conditions :
+
+1. The counter is counting towards the limit and the counting direction changes. 
+   This means the counting should stop since the value now has crossed the 
+   limit in the direction of count. But, the model does not support this behaviour.
+
+   For eg. The counter is at 1 and is counting up and the limit has been set at 7.
+   If the count direction is now changed to downward count, the counter has already
+   crossed the limit 7 during count down, so, it should stop counting. 
+
+2. The counter is counting towards the limit and the limit changes so that the 
+   counter now exceeds the limit. This means the counting should stop since the 
+   value now has crossed the limit in the direction of count. But, the model does 
+   not support this behaviour.
+
+   For eg. The counter is at 7 and is counting up and the limit has been set at 14.
+   If the limit is now changed to 5, the counter has already crossed the limit 5 
+   during count down, so, it should stop counting. 
+

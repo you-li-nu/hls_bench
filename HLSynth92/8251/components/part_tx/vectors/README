@@ -1,0 +1,67 @@
+--------------------------------------------------------------------------------
+--
+--   Intel 8251 Benchmark
+--
+-- Source:  Intel Data Book
+--
+-- VHDL Benchmark author Indraneel Ghosh
+--                       University Of California, Irvine, CA 92717
+--
+-- Developed on April 7, 92
+--
+--------------------------------------------------------------------------------
+
+ This directory contains files and sub-directories that pertain to testing
+ the VHDL model of the 8251.
+
+
+ The 8251 is a quite complicated chip and required many test vectors to 
+ test its functionality. Thus, it was not feasible to put all test vectors 
+ in the same file. So, we have grouped the test vectors together into
+ different files on the basis of the mode of functionality they are testing.
+
+ THIS DIRECTORY HAS THE FOLLOWING FILES :
+
+sytx		      : This file contains test-vectors for simulating
+        		the SYNCHRONOUS TRANSMISSION mode of the 8251.
+
+tx_async_5_1x,	      : This file contains test-vectors for simulating
+tx_async_5_16x          the ASYNCHRONOUS TRANSMISSION Mode (with 5 bits per
+		        character) of the 8251, using 1x and 16x baud rates
+
+tx_async_5_64x_1stop  : This file contains test-vectors for simulating
+tx_async_5_16x_1.5stop, the ASYNCHRONOUS TRANSMISSION Mode (with 5 bits per
+tx_async_5_16x_2stop    character) of the 8251, using 64x baud rate with 1,
+                        1.5 and 2 stop bits
+
+tx_async_6_1x,	      : This file contains test-vectors for simulating
+tx_async_6_16x          the ASYNCHRONOUS TRANSMISSION Mode (with 6 bits per
+		        character) of the 8251, using 1x and 16x baud rates
+
+tx_async_6_64x_1stop  : This file contains test-vectors for simulating
+tx_async_6_16x_1.5stop, the ASYNCHRONOUS TRANSMISSION Mode (with 6 bits per
+tx_async_6_16x_2stop    character) of the 8251, using 64x baud rate with 1,
+                        1.5 and 2 stop bits
+
+tx_async_7_1x,	      : This file contains test-vectors for simulating
+tx_async_7_16x          the ASYNCHRONOUS TRANSMISSION Mode (with 7 bits per
+		        character) of the 8251, using 1x and 16x baud rates
+
+tx_async_7_64x_1stop  : This file contains test-vectors for simulating
+tx_async_7_16x_1.5stop, the ASYNCHRONOUS TRANSMISSION Mode (with 7 bits per
+tx_async_7_16x_2stop    character) of the 8251, using 64x baud rate with 1,
+                        1.5 and 2 stop bits
+
+tx_async_8_1x,	      : This file contains test-vectors for simulating
+tx_async_8_16x          the ASYNCHRONOUS TRANSMISSION Mode (with 8 bits per
+		        character) of the 8251, using 1x and 16x baud rates
+
+tx_async_8_64x_1stop  : This file contains test-vectors for simulating
+tx_async_8_16x_1.5stop, the ASYNCHRONOUS TRANSMISSION Mode (with 8 bits per
+tx_async_8_16x_2stop    character) of the 8251, using 64x baud rate with 1,
+                        1.5 and 2 stop bits
+
+
+
+
+
