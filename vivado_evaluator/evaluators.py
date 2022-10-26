@@ -3,7 +3,7 @@ import sys
 import config
 import time
 import subprocess
-from verilog_processing import kairos_preprocess
+from verilog_processing import kairos_preprocess, avr_preprocess
 
 
 class Evaluator:
@@ -97,12 +97,66 @@ class AbcPdrKairosEvaluator(Evaluator):
 
 
 class NuxmvKairosEvaluator(Evaluator):
-    pass
+    """
+    Evaluator for the `nuXmv` tool's IC3 checker for the Kairos product machine.
+    """
+    pm_verilog_file: str = "product_machine_temp.v"
+    pm_aiger_file: str = "product_machine_temp.aig"
+    cmd_file: str = "nuxmv_cmd.txt"
+
+    def preprocess(self, file_1: str, file_2: str):
+        top_level_name = kairos_preprocess(file_1, file_2, self.pm_verilog_file)
+        _verilog_to_aiger(self.pm_verilog_file, self.pm_aiger_file, top_level_name)
+        nuxmv_commands = [
+            f"read_aiger_model -i {self.pm_aiger_file}",
+            "encode_variables",
+            "build_boolean_model",
+            "check_invar_ic3",
+            "quit",
+        ]
+        with open(self.cmd_file, "w") as f:
+            f.write("\n".join(nuxmv_commands))
+
+    def evaluate(self, log_file: str) -> float:
+        basic_cmd_line = f"{config.NUXMV_CMD} -source {self.cmd_file}"
+        return _common_run(basic_cmd_line, log_file)
+
+    def cleanup(self):
+        for file in [self.pm_verilog_file, self.pm_aiger_file, self.cmd_file]:
+            if os.path.exists(file):
+                os.remove(file)
+
+
+class AvrKairosEvaluator(Evaluator):
+    """
+    Evaluator for the `AVR` word-level tool for the Kairos product machine.
+    """
+    pm_verilog_file: str = "product_machine_temp.v"
+
+    def preprocess(self, file_1: str, file_2: str):
+        kairos_preprocess(file_1, file_2, self.pm_verilog_file)
+        avr_preprocess(self.pm_verilog_file, self.pm_verilog_file)
+
+    def evaluate(self, log_file: str) -> float:
+        cwd = os.getcwd()
+        src_path = os.path.abspath(self.pm_verilog_file)
+        log_path = os.path.abspath(log_file)
+        os.chdir(os.path.expanduser(config.AVR_PATH))
+        basic_cmd_line = f"python3 {config.AVR_MAIN} -n temp {src_path} -a sa"
+        result = _common_run(basic_cmd_line, log_path)
+        os.chdir(cwd)
+        return result
+
+    def cleanup(self):
+        for file in [self.pm_verilog_file]:
+            if os.path.exists(file):
+                os.remove(file)
 
 
 tool_name_to_evaluator: dict[str, Evaluator] = {
     "abc": AbcPdrKairosEvaluator(),
     "nuxmv": NuxmvKairosEvaluator(),
+    "avr": AvrKairosEvaluator(),
 }
 
 # Modify `config.py` before running this script.

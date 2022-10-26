@@ -296,3 +296,17 @@ def kairos_preprocess(src_file_1: str, src_file_2: str, dst_file: str) -> str:
     dst = construct_kairos(middle_1, middle_2)
     dst.write_to_file(dst_file)
     return dst.modules[-1].module_name
+
+
+def avr_preprocess(src_file: str, dst_file: str):
+    "Adjustments for the AVR program."
+    src = VerilogFile()
+    src.read_from_file(src_file)
+    line_number = src.modules[-1].end_line
+    dst = VerilogFile()
+    dst.raw_lines = src.raw_lines[:line_number] + [
+        f"wire prop = !{UNSAFE_SINGAL_NAME};",
+        "wire prop_neg = !prop;",
+        "assert property ( prop );",
+    ] + src.raw_lines[line_number:]
+    dst.write_to_file(dst_file)
