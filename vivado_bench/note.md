@@ -42,7 +42,7 @@ void gcd2(dint x_var, dint y_var, dint &gcd_output)
 #pragma HLS allocation instances=sub limit=1 operation
 
     while (x_var != y_var) {
-	#pragma HLS unroll factor=2
+	  #pragma HLS unroll factor=2
     #pragma HLS pipeline II=1
     	if (x_var < y_var) {
     		y_var -= x_var;
@@ -65,7 +65,7 @@ Turn off block I/O protocols, only clk, valid and reset remain.
 
 ### Resource allocation
 
-Limit the number of available operators within one clock cycle
+Limit the number of available operators within one clock cycle.
 
 `#pragma HLS allocation instances=sub limit=1 operation`
 
