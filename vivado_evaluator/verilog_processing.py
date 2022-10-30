@@ -310,3 +310,20 @@ def avr_preprocess(src_file: str, dst_file: str):
         "assert property ( prop );",
     ] + src.raw_lines[line_number:]
     dst.write_to_file(dst_file)
+
+
+def remove_nondeterminism(src: VerilogFile) -> VerilogFile:
+    "Remove nondeterminism by changing all `'bx`s to `'b0`s."
+    dst = VerilogFile()
+    dst.raw_lines.append("// Processed by function `remove_nondeterminism` in `verilog_tricks.py`.")
+    dst.raw_lines.extend(line.replace("'bx", "'b0") for line in src.raw_lines)
+    dst.parse_modules()
+    return dst
+
+
+def ours_preprocess(src_file: str, dst_file: str):
+    "Main verilog-to-verilog preprocess for files in our equivalence checker."
+    src = VerilogFile()
+    src.read_from_file(src_file)
+    dst = remove_nondeterminism(remove_reset_signal(src))
+    dst.write_to_file(dst_file)
