@@ -30,6 +30,8 @@ II = 1：
 
 A small II may not be achievable due to data dependency.
 
+gcd_a_b.v: iteration latency = a, initiation interval = b.
+
 ## Example
 
 ```
