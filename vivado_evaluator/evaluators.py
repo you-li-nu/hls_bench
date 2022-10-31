@@ -3,7 +3,7 @@ import sys
 import config
 import time
 import subprocess
-from verilog_processing import kairos_preprocess, avr_preprocess
+from verilog_processing import kairos_preprocess, avr_preprocess, ours_preprocess
 
 
 class Evaluator:
@@ -153,10 +153,41 @@ class AvrKairosEvaluator(Evaluator):
                 os.remove(file)
 
 
+class OursEvaluator(Evaluator):
+    """
+    Evaluator for our tool.
+    """
+    verilog_file_1: str = "temp_vivado_1.v"
+    verilog_file_2: str = "temp_vivado_2.v"
+    bit_level: bool
+
+    def __init__(self, bit_level: bool):
+        self.bit_level = bit_level
+
+    def preprocess(self, file_1: str, file_2: str):
+        ours_preprocess(file_1, self.verilog_file_1)
+        ours_preprocess(file_2, self.verilog_file_2)
+
+    def evaluate(self, log_file: str) -> float:
+        b = "bit" if self.bit_level else "word"
+        basic_cmd_line = f"python3 {config.OURS_MAIN} {self.verilog_file_1} {self.verilog_file_2} fast {b}"
+        return _common_run(basic_cmd_line, log_file)
+
+    def cleanup(self):
+        for file in [self.verilog_file_1, self.verilog_file_2]:
+            if os.path.exists(file):
+                os.remove(file)
+            btor2_file = file.replace(".v", ".btor2")
+            if os.path.exists(btor2_file):
+                os.remove(btor2_file)
+
+
 tool_name_to_evaluator: dict[str, Evaluator] = {
     "abc": AbcPdrKairosEvaluator(),
     "nuxmv": NuxmvKairosEvaluator(),
     "avr": AvrKairosEvaluator(),
+    "ours-bit": OursEvaluator(True),
+    "ours-word": OursEvaluator(False),
 }
 
 # Modify `config.py` before running this script.
