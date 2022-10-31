@@ -321,9 +321,53 @@ def remove_nondeterminism(src: VerilogFile) -> VerilogFile:
     return dst
 
 
+def split_fsm_into_bits(src: VerilogFile) -> VerilogFile:
+    "Split FSM registers into bits, so that they are checked more efficiently by our tools."
+    dst = VerilogFile()
+    dst.raw_lines.append("// Processed by function `split_fsm_into_bits` in `verilog_tricks.py`.")
+
+    curr_fsm_name = None
+    curr_fsm_width = None
+    curr_fsm_bit_names = None
+    for line in src.raw_lines:
+        if "reg " in line and "_CS_fsm" in line:  # FSM register definition
+            tokens = line.split()
+            assert tokens[-1][-1] == ";"
+            curr_fsm_name = tokens[-1][:-1]  # remove the semicolon
+            assert tokens[-2][0] == "[" and tokens[-2][-3:] == ":0]"
+            curr_fsm_width = int(tokens[-2][1:-3]) + 1  # e.g. "[3:0]"[1:-3] == "3"
+            assert curr_fsm_width > 1
+            curr_fsm_bit_names = [f"{curr_fsm_name}_bit_{i}" for i in range(curr_fsm_width)]
+            for bit_name in curr_fsm_bit_names:
+                dst.raw_lines.append(f"reg {bit_name};")
+            dst.raw_lines.append(line.replace("reg ", "wire "))
+            dst.raw_lines.append(f"assign {curr_fsm_name} = {{ {', '.join(reversed(curr_fsm_bit_names))} }};")
+        elif f"{curr_fsm_name} = " in line:  # FSM register initialization
+            tokens = line.split()
+            time_label, name, equal_sign, value = tokens
+            assert time_label == "#0" and name == curr_fsm_name and equal_sign == "="
+            assert "'d" in value and value[-1] == ";"  # e.g. "3'd1;"
+            int_value = int(value[value.find("'d") + 2:-1])
+            bit_values = [(int_value >> i) & 1 for i in range(curr_fsm_width)]
+            for bit_name, bit_value in zip(curr_fsm_bit_names, bit_values):
+                dst.raw_lines.append(f"{time_label} {bit_name} = 1'b{bit_value};")
+        elif f"{curr_fsm_name} <= " in line:  # FSM register update
+            tokens = line.split()
+            name, assign_sign, value = tokens
+            assert name == curr_fsm_name and assign_sign == "<="
+            assert value[-1] == ";" and not value[0].isdigit()
+            for i, bit_name in enumerate(curr_fsm_bit_names):
+                dst.raw_lines.append(f"{bit_name} <= {value[:-1]}[{i}];")
+        else:
+            dst.raw_lines.append(line)
+
+    dst.parse_modules()
+    return dst
+
+
 def ours_preprocess(src_file: str, dst_file: str):
     "Main verilog-to-verilog preprocess for files in our equivalence checker."
     src = VerilogFile()
     src.read_from_file(src_file)
-    dst = remove_nondeterminism(remove_reset_signal(src))
+    dst = split_fsm_into_bits(remove_nondeterminism(remove_reset_signal(src)))
     dst.write_to_file(dst_file)

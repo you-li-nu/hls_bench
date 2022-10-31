@@ -157,12 +157,19 @@ class OursEvaluator(Evaluator):
     """
     Evaluator for our tool.
     """
-    verilog_file_1: str = "temp_vivado_1.v"
-    verilog_file_2: str = "temp_vivado_2.v"
+    verilog_file_1: str
+    verilog_file_2: str
     bit_level: bool
+    fast_slow_mode: bool
+    swap: bool
 
-    def __init__(self, bit_level: bool):
+    def __init__(self, bit_level: bool, fast_slow_mode: bool, swap: bool):
         self.bit_level = bit_level
+        self.fast_slow_mode = fast_slow_mode
+        self.swap = swap
+        prefix = f"{'b' if bit_level else 'w'}{'f' if fast_slow_mode else 'e'}{'s' if swap else 'n'}"
+        self.verilog_file_1 = f"{prefix}_temp_vivado_1.v"
+        self.verilog_file_2 = f"{prefix}_temp_vivado_2.v"
 
     def preprocess(self, file_1: str, file_2: str):
         ours_preprocess(file_1, self.verilog_file_1)
@@ -170,7 +177,9 @@ class OursEvaluator(Evaluator):
 
     def evaluate(self, log_file: str) -> float:
         b = "bit" if self.bit_level else "word"
-        basic_cmd_line = f"python3 {config.OURS_MAIN} {self.verilog_file_1} {self.verilog_file_2} fast {b}"
+        f = "fast" if self.fast_slow_mode else "even"
+        l, r = (self.verilog_file_1, self.verilog_file_2) if not self.swap else (self.verilog_file_2, self.verilog_file_1)
+        basic_cmd_line = f"python3 {config.OURS_MAIN} {l} {r} {f} {b}"
         return _common_run(basic_cmd_line, log_file)
 
     def cleanup(self):
@@ -186,17 +195,42 @@ tool_name_to_evaluator: dict[str, Evaluator] = {
     "abc": AbcPdrKairosEvaluator(),
     "nuxmv": NuxmvKairosEvaluator(),
     "avr": AvrKairosEvaluator(),
-    "ours-bit": OursEvaluator(True),
-    "ours-word": OursEvaluator(False),
+    # "ours-bit": OursEvaluator(True),
+    "word-fast": OursEvaluator(False, True, False),
+    "word-even": OursEvaluator(False, False, False),
+    "word-swap": OursEvaluator(False, False, True),
 }
 
 # Modify `config.py` before running this script.
 # Usage example:
 # $ python3 evaluators.py abc ../vivado_bench/gcd gcd_1.v gcd_2.v gcd_1_2_abc.log
-if __name__ == "__main__":
-    _, tool_name, folder, name_1, name_2, log_file = sys.argv
+
+def do_task(tool_name: str, folder: str, name_1: str, name_2: str, log_file: str):
     evaluator = tool_name_to_evaluator[tool_name]
     evaluator.preprocess(os.path.join(folder, name_1), os.path.join(folder, name_2))
     time_elapsed = evaluator.evaluate(log_file)
     evaluator.cleanup()
     print("Time in secs:", time_elapsed)
+
+tool_name_to_i = {
+    # "abc": [2, 3, 4, 5, 6, 8],                  # Process   3 , Order  2
+    # "nuxmv": [2, 3, 4, 5, 6, 8],                # Process  2  , Order  2
+    # "avr": [4, 5, 6, 8, 16, 32],                # Process   3 , Order 1
+    # "ours-bit": [2, 3, 4, 5],                   # Process  2  , Order 1
+    # "ours-word": [2, 3, 4, 5, 6, 8, 16, 32],    # Process 1   , Order 1
+    "word-fast": [2, 3, 4, 5, 6, 8, 16, 32],
+    "word-even": [2, 3, 4, 5, 6, 8, 16, 32],
+    "word-swap": [2, 3, 4, 5, 6, 8, 16, 32],
+}
+
+if __name__ == "__main__":
+    # _, tool_name, folder, name_1, name_2, log_file = sys.argv
+    # tool_names = sys.argv[1:]
+    _, tool_name_ = sys.argv
+    folder = "../vivado_bench/guannan"
+    for tool_name in [tool_name_]:
+        for i in tool_name_to_i[tool_name]:
+            name_1 = f"gcd_1_{i}bit.v"
+            name_2 = f"gcd_2_{i}bit.v"
+            log_file = f"../logs/guannan/{tool_name}-{i}bit.log"
+            do_task(tool_name, folder, name_1, name_2, log_file)
