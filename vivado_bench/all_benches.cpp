@@ -72,6 +72,8 @@ void my_pow(dint x, dint n, dint &result)
     dint curr_product = x;
     result = 1;
     while (n > 0) {
+        #pragma HLS unroll factor=2
+		#pragma HLS pipeline II=1
         if (n & 1) {
             result *= curr_product;
         }
