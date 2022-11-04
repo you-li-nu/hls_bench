@@ -14,6 +14,6 @@ AVR_MAIN = "avr.py"
 OURS_MAIN = "~/src/rmse/src/main.py"
 
 
-TIME_LIMIT_IN_SECONDS = 60 * 60
+TIME_LIMIT_IN_SECONDS = 60 * 60 * 2
 
-MEMORY_LIMIT_IN_MIB = 1024 * 4
+MEMORY_LIMIT_IN_MIB = 1024 * 3

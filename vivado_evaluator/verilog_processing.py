@@ -205,7 +205,7 @@ def _wire_str(name: str, width_map: dict[str, int]) -> str:
         return f"[{width-1}:0] {name}"
 
 UNSAFE_SINGAL_NAME = "unsafe_signal"
-def construct_kairos(src_a: VerilogFile, src_b: VerilogFile) -> VerilogFile:
+def construct_kairos(src_a: VerilogFile, src_b: VerilogFile, fast_slow_mode: bool) -> VerilogFile:
     "Constructs a product machine for equivalence checking in the Kairos fashion."
     dst = VerilogFile()
     dst.raw_lines.append("// Processed by function `construct_kairos` in `verilog_tricks.py`.")
@@ -255,7 +255,10 @@ def construct_kairos(src_a: VerilogFile, src_b: VerilogFile) -> VerilogFile:
     dst.raw_lines.append(f"wire {CLK_ENABLE_SIGNAL_NAME}_A;")
     dst.raw_lines.append(f"wire {CLK_ENABLE_SIGNAL_NAME}_B;")
     dst.raw_lines.append(f"assign {CLK_ENABLE_SIGNAL_NAME}_A = ~{valid_output_name}_A | {valid_output_name}_B;")
-    dst.raw_lines.append(f"assign {CLK_ENABLE_SIGNAL_NAME}_B = ~{valid_output_name}_B | {valid_output_name}_A;")
+    if fast_slow_mode:
+        dst.raw_lines.append(f"assign {CLK_ENABLE_SIGNAL_NAME}_B = 1;")
+    else:
+        dst.raw_lines.append(f"assign {CLK_ENABLE_SIGNAL_NAME}_B = ~{valid_output_name}_B | {valid_output_name}_A;")
     dst.raw_lines.append(f"wire divergent;")
     dst.raw_lines.append(f"assign divergent = ~({' & '.join(miter_names)});")
     dst.raw_lines.append(f"assign {UNSAFE_SINGAL_NAME} = {valid_output_name}_A & {valid_output_name}_B & divergent;")
@@ -285,7 +288,7 @@ def construct_kairos(src_a: VerilogFile, src_b: VerilogFile) -> VerilogFile:
     return dst
 
 
-def kairos_preprocess(src_file_1: str, src_file_2: str, dst_file: str) -> str:
+def kairos_preprocess(src_file_1: str, src_file_2: str, dst_file: str, fast_slow_mode: bool) -> str:
     "Main verilog-to-verilog preprocess for kairos-style equivalence checking. Returns top-level module name."
     src_1 = VerilogFile()
     src_1.read_from_file(src_file_1)
@@ -293,7 +296,7 @@ def kairos_preprocess(src_file_1: str, src_file_2: str, dst_file: str) -> str:
     src_2 = VerilogFile()
     src_2.read_from_file(src_file_2)
     middle_2 = add_clk_enable_signal(remove_reset_signal(src_2))
-    dst = construct_kairos(middle_1, middle_2)
+    dst = construct_kairos(middle_1, middle_2, fast_slow_mode)
     dst.write_to_file(dst_file)
     return dst.modules[-1].module_name
 
