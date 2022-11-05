@@ -2,6 +2,7 @@
 Must be called from the `vivado_evaluator` directory.
 """
 import os
+import sys
 import time
 import json
 from evaluators import do_task
@@ -17,9 +18,10 @@ TASK_FILE = "tasks.json"  # (const file) stores a list of tasks
 GROUP_PATH = "../guannan/exp_2"  # path to benchmark groups
 GLOBAL_TASK_FILE = "global_tasks.json"  # manually configured, should be a JSON list of `group_path`s, e.g. ["gcd"]
 GLOBAL_PROGRESS_FILE = "global_progress.json"  # (mutable file) used by multi-process workers
-GLOBAL_LOG_FILE = "global_log.json"
+GLOBAL_LOG_FILE = "global_log.log"
 
 DEFAULT_WIDTH = 4  # default width of all vivado-generated benchmarks. must be followed by all benchmarks.
+WORKER_COUNT = 4  # number of workers to run in parallel, ordinarily equal to the number of cores
 
 
 def _global_log_write_line(line: str):
@@ -38,7 +40,7 @@ def backup_newest_experiment_data():
     if ret_code != 0:
         _global_log_write_line(f"backup ({file_name}) failed with code {ret_code}")
     else:
-        _global_log_write_line(f"backup ({file_name}) succeeded")
+        _global_log_write_line(f"backup ({file_name}) succeeded, zip file is {file_name}")
 
 
 def _is_no_slower_than(left_filename: str, right_filename: str) -> bool:
@@ -157,6 +159,9 @@ class Task:
         log_basename = f"{name_1}-VS-{name_2}-BY-{self.evaluator_name}-AT-{bit_width}.log"
         return os.path.join(GROUP_PATH, self.group_name, LOG_PATH, log_basename)
 
+    def to_str(self) -> str:
+        return f"({self.group_name}, {self.verilog_1_basename}, {self.verilog_2_basename}, {self.evaluator_name}, {self.bit_widths})"
+
     def do(self):
         "actually do the task; NOTE: once timeout, skip the rest. NOTE: avoid race condition."
         folder = os.path.join(GROUP_PATH, self.group_name, BENCH_PATH)
@@ -238,7 +243,7 @@ class TaskList:
 
 
 def preprocess_group(group_name: str):
-    "preprocess the group: preparing the fast table, and the task list."
+    "preprocess the group: preparing the fast table and the task list; create log folder if not exists."
     fast_table = FastTable().fill(group_name)
     fast_table_file = os.path.join(GROUP_PATH, group_name, FAST_TABLE_FILE)
     fast_table.dump_to_file(fast_table_file)
@@ -248,3 +253,81 @@ def preprocess_group(group_name: str):
     task_list_file = os.path.join(GROUP_PATH, group_name, TASK_FILE)
     task_list.dump_to_file(task_list_file)
     assert TaskList().load_from_file(task_list_file) == task_list
+
+    log_folder = os.path.join(GROUP_PATH, group_name, LOG_PATH)
+    if not os.path.exists(log_folder):
+        os.mkdir(log_folder)
+
+
+def _load_task_groups(group_names: list[str]) -> list[TaskList]:
+    "load all tasks from all groups."
+    task_groups = []
+    for group_name in group_names:
+        task_filepath = os.path.join(GROUP_PATH, group_name, TASK_FILE)
+        task_groups.append(TaskList().load_from_file(task_filepath))
+    return task_groups
+
+
+def execute(worker_index: int):
+    "execute the tasks parallelly."
+    if worker_index not in range(WORKER_COUNT):
+        raise ValueError(f"worker_index {worker_index} is out of range 0-{WORKER_COUNT - 1}")
+    with open(GLOBAL_TASK_FILE, "r") as f:
+        group_names = json.load(f)
+    task_groups = _load_task_groups(group_names)
+    start_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+    _global_log_write_line(f"worker {worker_index} ({start_time}) starts with task groups: {group_names}")
+
+    while True:
+        while int(time.time()) % (WORKER_COUNT * 2) != (worker_index * 2):  # simple anti-race condition hack
+            print(f"Waiting for my turn... Now is {int(time.time())}", end="\r", flush=True)
+            time.sleep(0.1)
+        # Now, at most one worker falls through at any moment.
+        # Theoretically, **there is chance of failure**, but we also have various recovery mechanisms.
+        progress = Progress().load_from_file(GLOBAL_PROGRESS_FILE)
+        if progress.backed_up: # all tasks are done
+            _global_log_write_line(f"worker {worker_index} sees backing-up task has been claimed/done")
+            break
+        try:
+            group_index, task_index = progress.next_task
+            if group_index == len(task_groups):
+                progress.backed_up = True
+                progress.dump_to_file(GLOBAL_PROGRESS_FILE)
+                _global_log_write_line(f"worker {worker_index} starts backing up...")
+                backup_newest_experiment_data()  # when backup is done, this callee writes a global log
+            else:
+                curr_indices = (group_index, task_index)
+                task = task_groups[group_index].tasks[task_index]
+                task_index += 1
+                if task_index == len(task_groups[group_index].tasks):
+                    task_index = 0
+                    group_index += 1
+                progress.next_task = (group_index, task_index)
+                progress.dump_to_file(GLOBAL_PROGRESS_FILE)
+                if task.is_done():
+                    _global_log_write_line(f"worker {worker_index} **skips** task {curr_indices}")
+                else:
+                    _global_log_write_line(f"worker {worker_index} starts task {curr_indices}: {task.to_str()}")
+                    task.do()
+                    _global_log_write_line(f"worker {worker_index} finishes task {curr_indices}: {task.to_str()}")
+        except Exception as e:
+            _global_log_write_line(f"worker {worker_index} ({start_time}) exits with exception {e.__class__.__name__}: {e}")
+            raise e.with_traceback(None)  # re-print the traceback in console and exit the process
+
+    _global_log_write_line(f"worker {worker_index} ({start_time}) finishes and exits")
+    return
+
+
+# The following are the main functions for the user to use. Function names are "prefix matched".
+# - def preprocess_group(group_name: str)
+# - def execute(worker_index: int)
+if __name__ == "__main__":
+    func = sys.argv[1]
+    if func.startswith("p"):
+        _, _, group_name = sys.argv
+        preprocess_group(str(group_name))
+    elif func.startswith("e"):
+        _, _, worker_index = sys.argv
+        execute(int(worker_index))
+    else:
+        raise ValueError(f"Unknown function {func}")
