@@ -374,3 +374,23 @@ def ours_preprocess(src_file: str, dst_file: str):
     src.read_from_file(src_file)
     dst = split_fsm_into_bits(remove_nondeterminism(remove_reset_signal(src)))
     dst.write_to_file(dst_file)
+
+
+def change_vivado_width(src_file: str, dst_file: str, src_width: int, dst_width: int):
+    "helper function to change the word width of a vivado-generated verilog file"
+    with open(src_file, "r") as f:
+        lines = f.readlines()
+
+    to_find = f"[{src_width-1}:0]"
+    to_replace = f"[{dst_width-1}:0]"
+    fsm_str = "_fsm"
+
+    new_lines = []
+    for line in lines:
+        if fsm_str in line: # don't change FSM width
+            new_lines.append(line)
+        else:
+            new_lines.append(line.replace(to_find, to_replace))
+
+    with open(dst_file, "w") as f:
+        f.writelines(new_lines)

@@ -115,13 +115,17 @@ class NuxmvKairosEvaluator(Evaluator):
     """
     Evaluator for the `nuXmv` tool's IC3 checker for the Kairos product machine.
     """
-    pm_verilog_file: str = "_nuxmv_product_machine_temp.v"
-    pm_aiger_file: str = "_nuxmv_product_machine_temp.aig"
-    cmd_file: str = "_nuxmv_cmd.txt"
+    pm_verilog_file: str
+    pm_aiger_file: str
+    cmd_file: str
     fast_slow_mode: bool
 
     def __init__(self, fast_slow_mode: bool):
         self.fast_slow_mode = fast_slow_mode
+        now = int(time.time() * 1_000_000)  # make sure filename is unique for every run, avoid race condition
+        self.pm_verilog_file = f"nuxmv_{now}.v"
+        self.pm_aiger_file = f"nuxmv_{now}.aig"
+        self.cmd_file = f"nuxmv_cmd_{now}.txt"
 
     def preprocess(self, file_1: str, file_2: str):
         top_level_name = kairos_preprocess(file_1, file_2, self.pm_verilog_file, self.fast_slow_mode)
@@ -211,9 +215,9 @@ class OursEvaluator(Evaluator):
         self.bit_level = bit_level
         self.fast_slow_mode = fast_slow_mode
         self.swap = swap
-        prefix = f"{'b' if bit_level else 'w'}{'f' if fast_slow_mode else 'e'}{'s' if swap else 'n'}"
-        self.verilog_file_1 = f"t{prefix}_temp_vivado_1.v"
-        self.verilog_file_2 = f"t{prefix}_temp_vivado_2.v"
+        now = int(time.time() * 1_000_000)  # make sure filename is unique for every run, avoid race condition
+        self.verilog_file_1 = f"ours_vivado_1_{now}.v"
+        self.verilog_file_2 = f"ours_vivado_2_{now}.v"
 
     def preprocess(self, file_1: str, file_2: str):
         ours_preprocess(file_1, self.verilog_file_1)
@@ -236,13 +240,13 @@ class OursEvaluator(Evaluator):
 
 
 tool_name_to_evaluator: dict[str, Evaluator] = {
-    "abc": AbcPdrKairosEvaluator(),
+    # "abc": AbcPdrKairosEvaluator(),
     "nuxmv": NuxmvKairosEvaluator(False),
-    "avr": AvrKairosEvaluator(),
+    # "avr": AvrKairosEvaluator(),
     # "ours-bit": OursEvaluator(True),
     "word-fast": OursEvaluator(False, True, False),
     "word-even": OursEvaluator(False, False, False),
-    "word-swap": OursEvaluator(False, False, True),
+    # "word-swap": OursEvaluator(False, False, True),
     "nuxmv-fast": NuxmvKairosEvaluator(True),
 }
 
@@ -250,26 +254,30 @@ tool_name_to_evaluator: dict[str, Evaluator] = {
 # Usage example:
 # $ python3 evaluators.py abc ../vivado_bench/gcd gcd_1.v gcd_2.v gcd_1_2_abc.log
 
-def do_task(tool_name: str, folder: str, name_1: str, name_2: str, log_file: str):
+def do_task(tool_name: str, folder: str, name_1: str, name_2: str, log_file: str) -> float:
+    "Main function to evaluate and return the time elapsed (or `None` if timeout)."
     evaluator = tool_name_to_evaluator[tool_name]
     evaluator.preprocess(os.path.join(folder, name_1), os.path.join(folder, name_2))
     time_elapsed = evaluator.evaluate(log_file)
     evaluator.cleanup()
     print("Time in secs:", time_elapsed)
+    return time_elapsed
 
-tool_name_to_i = {
+# tool_name_to_i = {
     # "abc": [2, 3, 4, 5, 6, 8],                  # Process   3 , Order  2
     # "nuxmv": [2, 3, 4, 5, 6, 8],                # Process  2  , Order  2
     # "avr": [4, 5, 6, 8, 16, 32],                # Process   3 , Order 1
     # "ours-bit": [2, 3, 4, 5],                   # Process  2  , Order 1
     # "ours-word": [2, 3, 4, 5, 6, 8, 16, 32],    # Process 1   , Order 1
-    "word-fast": [2, 3, 4, 5, 6, 8, 16, 32],
-    "word-even": [2, 3, 4, 5, 6, 8, 16, 32],
-    "word-swap": [2, 3, 4, 5, 6, 8, 16, 32],
-}
+#     "word-fast": [2, 3, 4, 5, 6, 8, 16, 32],
+#     "word-even": [2, 3, 4, 5, 6, 8, 16, 32],
+#     "word-swap": [2, 3, 4, 5, 6, 8, 16, 32],
+# }
 
 if __name__ == "__main__":
-    do_task("word-fast", "../vivado_bench/gcd", "gcd_1c.v", "gcd_2.v", "temp.log")
+    pass
+    # do_task("word-swap", "../vivado_bench/gcd", "gcd_2.v", "gcd_1_1b.v", "temp4.log")
+    # do_task("word-even", "../vivado_bench/gcd", "gcd_1.v", "gcd_1_1.v", "temp-even.log")
 
     # files = sorted(os.listdir("../vivado_bench/gcd"))
     # eq_table = []
