@@ -34,7 +34,7 @@ void reverse(dint x, dint &result)
 	while (x != 0) {
 	#pragma HLS unroll factor=2
 	#pragma HLS pipeline II=1
-		rev = rev * 10 + pop;
+		rev = rev * 10 + x % 10;
 		x /= 10;
 	}
 	result = rev;
