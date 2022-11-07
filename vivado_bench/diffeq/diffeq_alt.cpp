@@ -1,5 +1,8 @@
 #include <ap_int.h>
 
+#define a_var ((dint) (constants >> 0))
+#define dx_var ((dint) (constants >> 4))
+
 typedef ap_uint<4> dint;
 typedef ap_uint<20> dint_5x;
 typedef ap_uint<8> dint_2x;
@@ -13,10 +16,11 @@ void diffeq(dint_5x vars, dint &Xoutport, dint &Youtport, dint &Uoutport)
 	dint_2x constants = vars >> 12;
 
 	dint x1, y1, t1, t2, t3, t4, t5, t6;
-	dint a_var, dx_var;
+	// dint a_var, dx_var;
 	
-	while (x_var < (a_var = constants >> 0)) {
-		dx_var = constants >> 4;
+	// while (x_var < (a_var = constants >> 0)) {
+    while (x_var < a_var) {
+		// dx_var = constants >> 4;
 		
     	t1 = u_var * dx_var;
     	t2 = 3 * x_var;
