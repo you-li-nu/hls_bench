@@ -41,9 +41,9 @@ reg Uoutport_V_ap_vld;
 wire   [3:0] x_var_V_fu_109_p1;
 (* fsm_encoding = "none" *) reg   [1:0] ap_CS_fsm;
 wire    ap_CS_fsm_state1;
-reg   [3:0] a_var_V_reg_241;
-wire  signed [3:0] dx_var_V_fu_143_p4;
-reg  signed [3:0] dx_var_V_reg_246;
+reg   [3:0] trunc_ln_reg_241;
+wire  signed [3:0] trunc_ln1_fu_143_p4;
+reg  signed [3:0] trunc_ln1_reg_246;
 wire  signed [3:0] t1_V_fu_171_p2;
 reg  signed [3:0] t1_V_reg_252;
 wire  signed [3:0] u_var_V_1_fu_204_p2;
@@ -51,9 +51,9 @@ wire    ap_CS_fsm_state2;
 wire   [0:0] icmp_ln887_fu_177_p2;
 wire   [3:0] y_var_V_1_fu_215_p2;
 wire   [3:0] x_var_V_1_fu_221_p2;
-reg  signed [3:0] p_0441_0_reg_79;
-reg  signed [3:0] p_0470_0_reg_89;
-reg  signed [3:0] p_0437_0_reg_99;
+reg  signed [3:0] p_0445_0_reg_79;
+reg  signed [3:0] p_0490_0_reg_89;
+reg  signed [3:0] p_0441_0_reg_99;
 wire   [1:0] tmp_fu_153_p4;
 wire   [3:0] and_ln_fu_163_p3;
 wire  signed [3:0] mul_ln209_fu_182_p2;
@@ -78,33 +78,33 @@ end
 
 always @ (posedge ap_clk) begin
     if (((icmp_ln887_fu_177_p2 == 1'd1) & (1'b1 == ap_CS_fsm_state2))) begin
-        p_0437_0_reg_99 <= u_var_V_1_fu_204_p2;
+        p_0441_0_reg_99 <= u_var_V_1_fu_204_p2;
     end else if ((1'b1 == ap_CS_fsm_state1)) begin
-        p_0437_0_reg_99 <= {{vars_V[11:8]}};
+        p_0441_0_reg_99 <= {{vars_V[11:8]}};
     end
 end
 
 always @ (posedge ap_clk) begin
     if (((icmp_ln887_fu_177_p2 == 1'd1) & (1'b1 == ap_CS_fsm_state2))) begin
-        p_0441_0_reg_79 <= x_var_V_1_fu_221_p2;
+        p_0445_0_reg_79 <= x_var_V_1_fu_221_p2;
     end else if ((1'b1 == ap_CS_fsm_state1)) begin
-        p_0441_0_reg_79 <= x_var_V_fu_109_p1;
+        p_0445_0_reg_79 <= x_var_V_fu_109_p1;
     end
 end
 
 always @ (posedge ap_clk) begin
     if (((icmp_ln887_fu_177_p2 == 1'd1) & (1'b1 == ap_CS_fsm_state2))) begin
-        p_0470_0_reg_89 <= y_var_V_1_fu_215_p2;
+        p_0490_0_reg_89 <= y_var_V_1_fu_215_p2;
     end else if ((1'b1 == ap_CS_fsm_state1)) begin
-        p_0470_0_reg_89 <= {{vars_V[7:4]}};
+        p_0490_0_reg_89 <= {{vars_V[7:4]}};
     end
 end
 
 always @ (posedge ap_clk) begin
     if ((1'b1 == ap_CS_fsm_state1)) begin
-        a_var_V_reg_241 <= {{vars_V[15:12]}};
-        dx_var_V_reg_246 <= {{vars_V[19:16]}};
         t1_V_reg_252 <= t1_V_fu_171_p2;
+        trunc_ln1_reg_246 <= {{vars_V[19:16]}};
+        trunc_ln_reg_241 <= {{vars_V[15:12]}};
     end
 end
 
@@ -150,11 +150,11 @@ always @ (*) begin
     endcase
 end
 
-assign Uoutport_V = p_0437_0_reg_99;
+assign Uoutport_V = p_0441_0_reg_99;
 
-assign Xoutport_V = p_0441_0_reg_79;
+assign Xoutport_V = p_0445_0_reg_79;
 
-assign Youtport_V = p_0470_0_reg_89;
+assign Youtport_V = p_0490_0_reg_89;
 
 assign and_ln_fu_163_p3 = {{tmp_fu_153_p4}, {2'd0}};
 
@@ -162,30 +162,30 @@ assign ap_CS_fsm_state1 = ap_CS_fsm[32'd0];
 
 assign ap_CS_fsm_state2 = ap_CS_fsm[32'd1];
 
-assign dx_var_V_fu_143_p4 = {{vars_V[19:16]}};
+assign icmp_ln887_fu_177_p2 = ((p_0445_0_reg_79 < trunc_ln_reg_241) ? 1'b1 : 1'b0);
 
-assign icmp_ln887_fu_177_p2 = ((p_0441_0_reg_79 < a_var_V_reg_241) ? 1'b1 : 1'b0);
+assign mul_ln209_fu_182_p2 = ($signed(t1_V_reg_252) * $signed(p_0441_0_reg_99));
 
-assign mul_ln209_fu_182_p2 = ($signed(t1_V_reg_252) * $signed(p_0437_0_reg_99));
+assign t1_V_fu_171_p2 = ($signed(and_ln_fu_163_p3) - $signed(trunc_ln1_fu_143_p4));
 
-assign t1_V_fu_171_p2 = ($signed(and_ln_fu_163_p3) - $signed(dx_var_V_fu_143_p4));
+assign t4_V_fu_187_p2 = ($signed(mul_ln209_fu_182_p2) * $signed(p_0445_0_reg_79));
 
-assign t4_V_fu_187_p2 = ($signed(mul_ln209_fu_182_p2) * $signed(p_0441_0_reg_79));
+assign t5_V_fu_193_p2 = ($signed(p_0490_0_reg_89) * $signed(t1_V_reg_252));
 
-assign t5_V_fu_193_p2 = ($signed(p_0470_0_reg_89) * $signed(t1_V_reg_252));
-
-assign t6_V_fu_198_p2 = ($signed(p_0437_0_reg_99) - $signed(t4_V_fu_187_p2));
+assign t6_V_fu_198_p2 = ($signed(p_0441_0_reg_99) - $signed(t4_V_fu_187_p2));
 
 assign tmp_fu_153_p4 = {{vars_V[17:16]}};
 
+assign trunc_ln1_fu_143_p4 = {{vars_V[19:16]}};
+
 assign u_var_V_1_fu_204_p2 = (t6_V_fu_198_p2 - t5_V_fu_193_p2);
 
-assign x_var_V_1_fu_221_p2 = ($signed(dx_var_V_reg_246) + $signed(p_0441_0_reg_79));
+assign x_var_V_1_fu_221_p2 = ($signed(trunc_ln1_reg_246) + $signed(p_0445_0_reg_79));
 
 assign x_var_V_fu_109_p1 = vars_V[3:0];
 
-assign y1_V_fu_210_p2 = ($signed(u_var_V_1_fu_204_p2) * $signed(dx_var_V_reg_246));
+assign y1_V_fu_210_p2 = ($signed(u_var_V_1_fu_204_p2) * $signed(trunc_ln1_reg_246));
 
-assign y_var_V_1_fu_215_p2 = ($signed(y1_V_fu_210_p2) + $signed(p_0470_0_reg_89));
+assign y_var_V_1_fu_215_p2 = ($signed(y1_V_fu_210_p2) + $signed(p_0490_0_reg_89));
 
 endmodule //diffeq
