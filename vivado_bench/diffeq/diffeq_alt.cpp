@@ -3,7 +3,7 @@
 typedef ap_uint<4> dint;
 typedef ap_uint<20> dint_5x;
 typedef ap_uint<8> dint_2x;
-void diffeq(dint vars, dint &Xoutport, dint &Youtport, dint &Uoutport)
+void diffeq(dint_5x vars, dint &Xoutport, dint &Youtport, dint &Uoutport)
 {
 #pragma HLS interface ap_ctrl_none port=return
 #pragma HLS allocation instances=mul limit=1 operation
@@ -11,7 +11,7 @@ void diffeq(dint vars, dint &Xoutport, dint &Youtport, dint &Uoutport)
 	dint y_var = vars >> 4;
 	dint u_var = vars >> 8;
 	dint_2x constants = vars >> 12;
-    
+
 	dint x1, y1, t1, t2, t3, t4, t5, t6;
 	dint a_var, dx_var;
 	
