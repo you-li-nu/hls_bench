@@ -52,7 +52,7 @@ wire   [0:0] icmp_ln887_fu_177_p2;
 wire   [3:0] y_var_V_1_fu_215_p2;
 wire   [3:0] x_var_V_1_fu_221_p2;
 reg  signed [3:0] p_0441_0_reg_79;
-reg  signed [3:0] p_0438_0_reg_89;
+reg  signed [3:0] p_0470_0_reg_89;
 reg  signed [3:0] p_0437_0_reg_99;
 wire   [1:0] tmp_fu_153_p4;
 wire   [3:0] and_ln_fu_163_p3;
@@ -86,17 +86,17 @@ end
 
 always @ (posedge ap_clk) begin
     if (((icmp_ln887_fu_177_p2 == 1'd1) & (1'b1 == ap_CS_fsm_state2))) begin
-        p_0438_0_reg_89 <= y_var_V_1_fu_215_p2;
+        p_0441_0_reg_79 <= x_var_V_1_fu_221_p2;
     end else if ((1'b1 == ap_CS_fsm_state1)) begin
-        p_0438_0_reg_89 <= {{vars_V[7:4]}};
+        p_0441_0_reg_79 <= x_var_V_fu_109_p1;
     end
 end
 
 always @ (posedge ap_clk) begin
     if (((icmp_ln887_fu_177_p2 == 1'd1) & (1'b1 == ap_CS_fsm_state2))) begin
-        p_0441_0_reg_79 <= x_var_V_1_fu_221_p2;
+        p_0470_0_reg_89 <= y_var_V_1_fu_215_p2;
     end else if ((1'b1 == ap_CS_fsm_state1)) begin
-        p_0441_0_reg_79 <= x_var_V_fu_109_p1;
+        p_0470_0_reg_89 <= {{vars_V[7:4]}};
     end
 end
 
@@ -154,7 +154,7 @@ assign Uoutport_V = p_0437_0_reg_99;
 
 assign Xoutport_V = p_0441_0_reg_79;
 
-assign Youtport_V = p_0438_0_reg_89;
+assign Youtport_V = p_0470_0_reg_89;
 
 assign and_ln_fu_163_p3 = {{tmp_fu_153_p4}, {2'd0}};
 
@@ -172,7 +172,7 @@ assign t1_V_fu_171_p2 = ($signed(and_ln_fu_163_p3) - $signed(dx_var_V_fu_143_p4)
 
 assign t4_V_fu_187_p2 = ($signed(mul_ln209_fu_182_p2) * $signed(p_0441_0_reg_79));
 
-assign t5_V_fu_193_p2 = ($signed(p_0438_0_reg_89) * $signed(t1_V_reg_252));
+assign t5_V_fu_193_p2 = ($signed(p_0470_0_reg_89) * $signed(t1_V_reg_252));
 
 assign t6_V_fu_198_p2 = ($signed(p_0437_0_reg_99) - $signed(t4_V_fu_187_p2));
 
@@ -186,6 +186,6 @@ assign x_var_V_fu_109_p1 = vars_V[3:0];
 
 assign y1_V_fu_210_p2 = ($signed(u_var_V_1_fu_204_p2) * $signed(dx_var_V_reg_246));
 
-assign y_var_V_1_fu_215_p2 = ($signed(y1_V_fu_210_p2) + $signed(p_0438_0_reg_89));
+assign y_var_V_1_fu_215_p2 = ($signed(y1_V_fu_210_p2) + $signed(p_0470_0_reg_89));
 
 endmodule //diffeq

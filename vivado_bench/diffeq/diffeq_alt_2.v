@@ -56,7 +56,7 @@ reg   [3:0] x_var_V_1_reg_311;
 wire   [3:0] y_var_V_1_fu_264_p2;
 wire    ap_CS_fsm_state3;
 reg  signed [3:0] p_0441_0_reg_85;
-reg  signed [3:0] p_0438_0_reg_95;
+reg  signed [3:0] p_0470_0_reg_95;
 reg  signed [3:0] p_0437_0_reg_106;
 reg  signed [3:0] grp_fu_116_p0;
 reg  signed [3:0] grp_fu_116_p1;
@@ -91,17 +91,17 @@ end
 
 always @ (posedge ap_clk) begin
     if ((1'b1 == ap_CS_fsm_state3)) begin
-        p_0438_0_reg_95 <= y_var_V_1_fu_264_p2;
+        p_0441_0_reg_85 <= x_var_V_1_reg_311;
     end else if ((1'b1 == ap_CS_fsm_state1)) begin
-        p_0438_0_reg_95 <= {{vars_V[7:4]}};
+        p_0441_0_reg_85 <= x_var_V_fu_174_p1;
     end
 end
 
 always @ (posedge ap_clk) begin
     if ((1'b1 == ap_CS_fsm_state3)) begin
-        p_0441_0_reg_85 <= x_var_V_1_reg_311;
+        p_0470_0_reg_95 <= y_var_V_1_fu_264_p2;
     end else if ((1'b1 == ap_CS_fsm_state1)) begin
-        p_0441_0_reg_85 <= x_var_V_fu_174_p1;
+        p_0470_0_reg_95 <= {{vars_V[7:4]}};
     end
 end
 
@@ -148,7 +148,7 @@ always @ (*) begin
     if ((1'b1 == ap_CS_fsm_state3)) begin
         grp_fu_116_p0 = u_var_V_1_reg_305;
     end else if ((1'b1 == ap_CS_fsm_state2)) begin
-        grp_fu_116_p0 = p_0438_0_reg_95;
+        grp_fu_116_p0 = p_0470_0_reg_95;
     end else begin
         grp_fu_116_p0 = 'bx;
     end
@@ -189,7 +189,7 @@ assign Uoutport_V = p_0437_0_reg_106;
 
 assign Xoutport_V = p_0441_0_reg_85;
 
-assign Youtport_V = p_0438_0_reg_95;
+assign Youtport_V = p_0470_0_reg_95;
 
 assign and_ln_fu_228_p3 = {{tmp_fu_218_p4}, {2'd0}};
 
@@ -221,6 +221,6 @@ assign x_var_V_1_fu_259_p2 = ($signed(dx_var_V_reg_290) + $signed(p_0441_0_reg_8
 
 assign x_var_V_fu_174_p1 = vars_V[3:0];
 
-assign y_var_V_1_fu_264_p2 = ($signed(grp_fu_116_p2) + $signed(p_0438_0_reg_95));
+assign y_var_V_1_fu_264_p2 = ($signed(grp_fu_116_p2) + $signed(p_0470_0_reg_95));
 
 endmodule //diffeq
