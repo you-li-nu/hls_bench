@@ -148,6 +148,63 @@ def remove_reset_signal(src: VerilogFile) -> VerilogFile:
     return dst
 
 
+MERGED_VALID_SIGNAL_NAME = "merged_vld"
+def merge_valid_signals(src: VerilogFile) -> VerilogFile:
+    "Merge all valid signals into one. Assume there is only one module, I am lazy..."
+    dst = VerilogFile()
+    dst.raw_lines.append("// Processed by function `merge_valid_signals` in `verilog_tricks.py`.")
+    m, = src.modules
+    curr_src_line_index = 0
+
+    while curr_src_line_index < len(src.raw_lines):
+        # start of a module:
+        if curr_src_line_index == m.start_line:
+            valid_signal_names = []
+            while curr_src_line_index < m.port_end_line:  # when loop ends, just right at the ");" line.
+                line = src.raw_lines[curr_src_line_index]
+                name = line.strip().strip(",")
+                if name.endswith("(") or name.endswith(");") or len(name) == 0:  # non-name line, keep it
+                    dst.raw_lines.append(line)
+                elif name.endswith("_vld"):  # skip the line
+                    valid_signal_names.append(name)
+                else:
+                    dst.raw_lines.append(f"{name},")
+                curr_src_line_index += 1
+            assert len(valid_signal_names) > 0
+            if len(valid_signal_names) == 1:  # no need to process, early return...
+                return src
+            dst.raw_lines.append(MERGED_VALID_SIGNAL_NAME)
+            yet_to_process_count = len(valid_signal_names)
+            while curr_src_line_index <= m.end_line:
+                line = src.raw_lines[curr_src_line_index]
+                if line.startswith("output "):
+                    tokens = line.strip(";").split()
+                    if len(tokens) == 2 and tokens[1] in valid_signal_names:
+                        # dst.raw_lines.append(line.replace("output ", "wire ")) seems wire cannot be assigned in block..
+                        dst.raw_lines.append(line.replace("output ", "reg "))
+                        yet_to_process_count -= 1
+                    else:
+                        dst.raw_lines.append(line)
+                elif line.startswith("reg "):
+                    tokens = line.strip(";").split()
+                    if len(tokens) == 2 and tokens[1] in valid_signal_names:
+                        pass # remove redundant regs; already declared as reg (originally "as wire")
+                    else:
+                        dst.raw_lines.append(line)
+                else:
+                    dst.raw_lines.append(line)
+                if yet_to_process_count == 0:
+                    dst.raw_lines.append(f"output {MERGED_VALID_SIGNAL_NAME};")
+                    dst.raw_lines.append(f"assign {MERGED_VALID_SIGNAL_NAME} = {' & '.join(valid_signal_names)};")
+                    yet_to_process_count -= 1
+                curr_src_line_index += 1
+        else: # outside of a module, just copy the lines:
+            dst.raw_lines.append(src.raw_lines[curr_src_line_index])
+            curr_src_line_index += 1
+    dst.parse_modules()
+    return dst
+
+
 CLK_ENABLE_SIGNAL_NAME = "clk_enable"
 def add_clk_enable_signal(src: VerilogFile) -> VerilogFile:
     "Add a clock enable signal to every module in `src`, as an alternative to clock gating."
@@ -292,10 +349,10 @@ def kairos_preprocess(src_file_1: str, src_file_2: str, dst_file: str, fast_slow
     "Main verilog-to-verilog preprocess for kairos-style equivalence checking. Returns top-level module name."
     src_1 = VerilogFile()
     src_1.read_from_file(src_file_1)
-    middle_1 = add_clk_enable_signal(remove_reset_signal(src_1))
+    middle_1 = add_clk_enable_signal(remove_reset_signal(merge_valid_signals(src_1)))
     src_2 = VerilogFile()
     src_2.read_from_file(src_file_2)
-    middle_2 = add_clk_enable_signal(remove_reset_signal(src_2))
+    middle_2 = add_clk_enable_signal(remove_reset_signal(merge_valid_signals(src_2)))
     dst = construct_kairos(middle_1, middle_2, fast_slow_mode)
     dst.write_to_file(dst_file)
     return dst.modules[-1].module_name
@@ -372,7 +429,7 @@ def ours_preprocess(src_file: str, dst_file: str):
     "Main verilog-to-verilog preprocess for files in our equivalence checker."
     src = VerilogFile()
     src.read_from_file(src_file)
-    dst = split_fsm_into_bits(remove_nondeterminism(remove_reset_signal(src)))
+    dst = split_fsm_into_bits(remove_nondeterminism(remove_reset_signal(merge_valid_signals(src))))
     dst.write_to_file(dst_file)
 
 

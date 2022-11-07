@@ -1,3 +1,7 @@
 __pycache__
 *.log
 guannan/
+vivado_evaluator/*.v
+vivado_evaluator/*.btor2
+vivado_evaluator/*.aig
+vivado_evaluator/*.txt
