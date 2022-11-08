@@ -4,8 +4,8 @@
 #include <ap_int.h>
 
 // Hardcoded parameters:
-#define a_var 2048
-#define dx_var 2
+#define a_var 15
+#define dx_var 1
 
 typedef ap_uint<4> dint;
 typedef ap_uint<12> dint_3x;
