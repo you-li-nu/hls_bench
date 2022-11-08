@@ -1,16 +1,21 @@
+// The easy version of diffeq. Still solving a differential equation, but
+// the parameters `dx` and `a` are now hardcoded, rather than user-specified.
+
 #include <ap_int.h>
 
+// Hardcoded parameters:
+#define a_var 2048
+#define dx_var 2
+
 typedef ap_uint<4> dint;
-typedef ap_uint<20> dint_5x;
-void diffeq(dint_5x vars, dint &Xoutport, dint &Youtport, dint &Uoutport)
+typedef ap_uint<12> dint_3x;
+void diffeq_easy(dint_3x vars, dint &Xoutport, dint &Youtport, dint &Uoutport)
 {
 #pragma HLS interface ap_ctrl_none port=return
 // #pragma HLS allocation instances=mul limit=1 operation
 	dint x_var = vars >> 0;
 	dint y_var = vars >> 4;
 	dint u_var = vars >> 8;
-	dint a_var = vars >> 12;
-	dint dx_var = vars >> 16;
 	dint x1, y1, t1, t2, t3, t4, t5, t6;
     while (x_var < a_var) {
     	t1 = u_var * dx_var;
