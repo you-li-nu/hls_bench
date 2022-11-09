@@ -8,8 +8,7 @@ typedef ap_uint<12> word_3x_t;
 
 void fancy(bool startinp, word_3x_t abc, word_t &f)
 {
-	#pragma HLS interface ap_ctrl_none port=return
-	//#pragma HLS allocation instances=mul limit=1 operation
+#pragma HLS interface ap_ctrl_none port=return
 
     word_t a = abc >> 0;
     word_t b = abc >> 4;
@@ -19,9 +18,6 @@ void fancy(bool startinp, word_3x_t abc, word_t &f)
     word_t temp1a = 0, temp1b, temp3, temp4, temp6a;
     word_t counter = 0;
     while (counter < b) {
-		//#pragma HLS unroll factor=4
-		//#pragma HLS latency min=3 max=3
-    	//#pragma HLS pipeline II=1
         if (a <= counter) {
             if (a <= counter) {
                 temp6a = b;

@@ -29,14 +29,6 @@ inline void seed_gen(seed_t &seed, bool &video)
 void barcode(seed_t seed, addr_t num, bool &vld, bool &eoc, bool &memw, word_t &data, addr_t &addr)
 {
 #pragma HLS interface ap_ctrl_none port=return
-#pragma HLS interface ap_none port=vld
-#pragma HLS interface ap_none port=eoc
-#pragma HLS interface ap_none port=memw
-#pragma HLS interface ap_none port=data
-#pragma HLS interface ap_none port=addr
-
-//#pragma HLS allocation instances=mul limit=1 operation
-
 /* WARN: The Valid Signal is Manually Set (`vld`). DO NOT GENERATE ANOTHER. */
     vld = false;
     eoc = false;
@@ -46,9 +38,6 @@ void barcode(seed_t seed, addr_t num, bool &vld, bool &eoc, bool &memw, word_t &
     bool flag = WHITE; // color of the current stripe
     word_t width = 0; // width of the current stripe
     while (actnum != num) {
-		//#pragma HLS unroll factor=2
-		#pragma HLS latency min=1 max=1
-    	//#pragma HLS pipeline II=1
         seed_gen(seed, video);
         if (video != flag) {
             // write the width of the previous stripe to the memory:
