@@ -6,7 +6,7 @@ import sys
 import time
 import json
 from evaluators import do_task
-from verilog_processing import change_vivado_width
+from verilog_processing import change_vivado_width_with_config
 
 assert os.getcwd() == os.path.expanduser("~/src/hls_bench/vivado_evaluator")
 
@@ -14,11 +14,13 @@ BENCH_PATH = "bench"
 LOG_PATH = "log"
 FAST_TABLE_FILE = "fast_table.json"  # (const file) stores a table of which verilog is faster than which
 TASK_FILE = "tasks.json"  # (const file) stores a list of tasks
+CHANGER_FILE = "changer_config.py"  # manually configured for bit size changing
 
 GROUP_PATH = "../guannan/exp_2"  # path to benchmark groups
 GLOBAL_TASK_FILE = "global_tasks.json"  # manually configured, should be a JSON list of `group_path`s, e.g. ["gcd"]
 GLOBAL_PROGRESS_FILE = "global_progress.json"  # (mutable file) used by multi-process workers
 GLOBAL_LOG_FILE = "global_log.log"
+GLOBAL_YIELD_FILE = "global_yield.json"  # manually configured, should be a plain number, like 1.
 
 DEFAULT_WIDTH = 4  # default width of all vivado-generated benchmarks. must be followed by all benchmarks.
 WORKER_COUNT = 4  # number of workers to run in parallel, ordinarily equal to the number of cores
@@ -32,6 +34,8 @@ def _global_log_write_line(line: str):
         f.write(f"[{log_time}] {line}\n")
 
 
+# !!!!!! DON'T RELY ON THIS AUTOMATIC BACKUP !!!!  IT IS MISSING SOME FILES !!!!
+# !!!!!! PLEASE MANUALLY BACKUP, DOWNLOAD & CHECK, AND KEEP A COPY ON GITHUB.
 def backup_newest_experiment_data():
     "backup the newest experiment data. can call manually, but also happens at the end of a task epoch."
     suffix = time.strftime("%y%m%d-%H%M%S", time.localtime())
@@ -40,18 +44,18 @@ def backup_newest_experiment_data():
     if ret_code != 0:
         _global_log_write_line(f"backup ({file_name}) failed with code {ret_code}")
     else:
-        _global_log_write_line(f"backup ({file_name}) succeeded, zip file is {file_name}")
+        _global_log_write_line(f"backup ({file_name}) succeeded")
 
 
-def _is_no_slower_than(left_filename: str, right_filename: str) -> bool:
+def _is_no_slower_than(left_filename: str, right_filename: str, changer_path: str) -> bool:
     "helper function to check if a verilog file design is 'no slower' than another"
     if left_filename == right_filename:
         return True
     left_modified = "left_modified.v"
     right_modified = "right_modified.v"
     dummy_log_file = "dummy_log.txt"
-    change_vivado_width(left_filename, left_modified, DEFAULT_WIDTH, 3)  # change to 3-bit
-    change_vivado_width(right_filename, right_modified, DEFAULT_WIDTH, 3)  # change to 3-bit
+    change_vivado_width_with_config(left_filename, left_modified, DEFAULT_WIDTH, 3, changer_path)  # change to 3-bit
+    change_vivado_width_with_config(right_filename, right_modified, DEFAULT_WIDTH, 3, changer_path)  # change to 3-bit
     do_task("nuxmv-fast", ".", left_modified, right_modified, dummy_log_file)
     with open(dummy_log_file, "r") as f:
         result = "Trace Type: Counterexample" not in f.read()
@@ -70,13 +74,14 @@ class FastTable:
     
     def fill(self, group_name: str) -> "FastTable":
         folder = os.path.join(GROUP_PATH, group_name, BENCH_PATH)
+        changer_path = os.path.join(GROUP_PATH, group_name, CHANGER_FILE)
         self.file_basenames = sorted(os.listdir(folder))
         self.no_slower_than = {}
         for basename_1 in self.file_basenames:
             filename_1 = os.path.join(folder, basename_1)
             for basename_2 in self.file_basenames:
                 filename_2 = os.path.join(folder, basename_2)
-                self.no_slower_than[(basename_1, basename_2)] = _is_no_slower_than(filename_1, filename_2)
+                self.no_slower_than[(basename_1, basename_2)] = _is_no_slower_than(filename_1, filename_2, changer_path)
         return self
 
     def load_from_file(self, file: str) -> "FastTable":
@@ -165,14 +170,15 @@ class Task:
     def do(self):
         "actually do the task; NOTE: once timeout, skip the rest. NOTE: avoid race condition."
         folder = os.path.join(GROUP_PATH, self.group_name, BENCH_PATH)
+        changer_path = os.path.join(GROUP_PATH, self.group_name, CHANGER_FILE)
         verilog_path_1 = os.path.join(folder, self.verilog_1_basename)
         verilog_path_2 = os.path.join(folder, self.verilog_2_basename)
         for bit_width in self.bit_widths:
             now = int(time.time() * 1_000_000)
             modified_path_1 = f"do_tmp_1_{now}.v"
             modified_path_2 = f"do_tmp_2_{now}.v"
-            change_vivado_width(verilog_path_1, modified_path_1, DEFAULT_WIDTH, bit_width)
-            change_vivado_width(verilog_path_2, modified_path_2, DEFAULT_WIDTH, bit_width)
+            change_vivado_width_with_config(verilog_path_1, modified_path_1, DEFAULT_WIDTH, bit_width, changer_path)
+            change_vivado_width_with_config(verilog_path_2, modified_path_2, DEFAULT_WIDTH, bit_width, changer_path)
             time_spent = do_task(self.evaluator_name, ".", modified_path_1, modified_path_2, self._get_log_path(bit_width))
             for file in [modified_path_1, modified_path_2]:
                 if os.path.exists(file):
@@ -268,6 +274,36 @@ def _load_task_groups(group_names: list[str]) -> list[TaskList]:
     return task_groups
 
 
+def _should_yield() -> bool:
+    "check if the worker should yield."
+    if os.path.exists(GLOBAL_YIELD_FILE):
+        with open(GLOBAL_YIELD_FILE, "r") as f:
+            num: int = json.load(f)
+        if num > 0:
+            with open(GLOBAL_YIELD_FILE, "w") as f:
+                json.dump(num - 1, f)
+            return True
+    return False
+
+
+def _update_groups(old_group_names: list[str], old_task_groups: list[TaskList]) -> tuple[bool, list[str], list[TaskList]]:
+    "Hot reload the task groups (incrementally)."
+    try:
+        with open(GLOBAL_TASK_FILE, "r") as f:
+            group_names = json.load(f)
+        # check if `old_group_names` is a prefix of `group_names` (must be incremental):
+        if group_names[:len(old_group_names)] != old_group_names:
+            raise ValueError("The new group names must **extend** the old group names.")
+        if group_names == old_group_names:
+            raise Exception("Benign exception, no update needed.")
+        task_groups = _load_task_groups(group_names)
+        print(f"Hot reload: {old_group_names} -> {group_names}")
+        return True, group_names, task_groups
+    except Exception as e:
+        print(f"Hot reload does not happen: {e}")
+        return False, old_group_names, old_task_groups
+
+
 def execute(worker_index: int):
     "execute the tasks parallelly."
     if worker_index not in range(WORKER_COUNT):
@@ -279,6 +315,9 @@ def execute(worker_index: int):
     _global_log_write_line(f"worker {worker_index} ({start_time}) starts with task groups: {group_names}")
 
     while True:
+        updated, group_names, task_groups = _update_groups(group_names, task_groups)
+        if updated:
+            _global_log_write_line(f"worker {worker_index} updates task groups: {group_names}")
         while int(time.time()) % (WORKER_COUNT * 2) != (worker_index * 2):  # simple anti-race condition hack
             print(f"Waiting for my turn... Now is {int(time.time())}", end="\r", flush=True)
             time.sleep(0.1)
@@ -289,6 +328,9 @@ def execute(worker_index: int):
             _global_log_write_line(f"worker {worker_index} sees backing-up task has been claimed/done")
             break
         try:
+            if _should_yield():  # manually set to exit early, to make room for other processes
+                _global_log_write_line(f"worker {worker_index} ({start_time}) yields and exits")
+                return
             group_index, task_index = progress.next_task
             if group_index == len(task_groups):
                 progress.backed_up = True
@@ -321,6 +363,7 @@ def execute(worker_index: int):
 # The following are the main functions for the user to use. Function names are "prefix matched".
 # - def preprocess_group(group_name: str)
 # - def execute(worker_index: int)
+# - def backup_newest_experiment_data()
 if __name__ == "__main__":
     func = sys.argv[1]
     if func.startswith("p"):
@@ -329,5 +372,7 @@ if __name__ == "__main__":
     elif func.startswith("e"):
         _, _, worker_index = sys.argv
         execute(int(worker_index))
+    elif func.startswith("b"):
+        backup_newest_experiment_data()
     else:
         raise ValueError(f"Unknown function {func}")

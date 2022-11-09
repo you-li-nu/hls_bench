@@ -1,3 +1,6 @@
+import os
+from typing import Callable
+
 def _is_clock_signal(name: str):
     "heuristic to determine if a signal is a clock"
     return name.endswith("_clk")
@@ -451,3 +454,33 @@ def change_vivado_width(src_file: str, dst_file: str, src_width: int, dst_width:
 
     with open(dst_file, "w") as f:
         f.writelines(new_lines)
+
+
+def change_vivado_width_with_config(src_file: str, dst_file: str, src_width: int, dst_width: int, config_file: str):
+    "helper function to change the word width of a vivado-generated verilog file"
+    if not os.path.exists(config_file):
+        change_vivado_width(src_file, dst_file, src_width, dst_width)  # fall back to the original function
+        return
+
+    # dynamically load `changers` as code from config file
+    assert src_width == 4
+    changers: dict[str, Callable[[int], str]]
+    with open(config_file, "r") as f:
+        changers = eval(f.read())
+
+    with open(src_file, "r") as f:
+        lines = f.readlines()
+
+    fsm_str = "_fsm"
+
+    for key, changer in changers.items():
+        new_lines = []
+        for line in lines:
+            if fsm_str in line: # don't change FSM width
+                new_lines.append(line)
+            else:
+                new_lines.append(line.replace(key, changer(dst_width)))
+        lines = new_lines
+
+    with open(dst_file, "w") as f:
+        f.writelines(lines)
