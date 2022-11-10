@@ -7,12 +7,12 @@
 
 `timescale 1 ns / 1 ps 
 
-(* CORE_GENERATION_INFO="kalman,hls_ip_2020_1,{HLS_INPUT_TYPE=cxx,HLS_INPUT_FLOAT=0,HLS_INPUT_FIXED=1,HLS_INPUT_PART=xc7k70t-fbv676-1,HLS_INPUT_CLOCK=10.000000,HLS_INPUT_ARCH=pipeline,HLS_SYN_CLOCK=7.525000,HLS_SYN_LAT=2,HLS_SYN_TPT=1,HLS_SYN_MEM=0,HLS_SYN_DSP=0,HLS_SYN_FF=20,HLS_SYN_LUT=302,HLS_VERSION=2020_1}" *)
+(* CORE_GENERATION_INFO="kalman,hls_ip_2020_1,{HLS_INPUT_TYPE=cxx,HLS_INPUT_FLOAT=0,HLS_INPUT_FIXED=1,HLS_INPUT_PART=xc7k70t-fbv676-1,HLS_INPUT_CLOCK=10.000000,HLS_INPUT_ARCH=pipeline,HLS_SYN_CLOCK=7.525000,HLS_SYN_LAT=2,HLS_SYN_TPT=1,HLS_SYN_MEM=0,HLS_SYN_DSP=0,HLS_SYN_FF=24,HLS_SYN_LUT=367,HLS_VERSION=2020_1}" *)
 
 module kalman (
         ap_clk,
         ap_rst,
-        nonce_V,
+        nonce_input_V,
         in_port_V,
         out_port_V,
         out_port_V_ap_vld
@@ -22,71 +22,77 @@ parameter    ap_ST_fsm_pp0_stage0 = 1'd1;
 
 input   ap_clk;
 input   ap_rst;
-input  [5:0] nonce_V;
+input  [5:0] nonce_input_V;
 input  [15:0] in_port_V;
 output  [7:0] out_port_V;
 output   out_port_V_ap_vld;
 
 reg out_port_V_ap_vld;
 
-wire  signed [3:0] add_ln700_2_fu_241_p2;
-reg  signed [3:0] add_ln700_2_reg_380;
+wire  signed [3:0] add_ln700_2_fu_245_p2;
+reg  signed [3:0] add_ln700_2_reg_414;
 (* fsm_encoding = "none" *) reg   [0:0] ap_CS_fsm;
 wire    ap_CS_fsm_pp0_stage0;
 wire    ap_block_state1_pp0_stage0_iter0;
 wire    ap_block_state2_pp0_stage0_iter1;
 wire    ap_block_state3_pp0_stage0_iter2;
 wire    ap_block_pp0_stage0_11001;
-wire  signed [3:0] add_ln700_5_fu_325_p2;
-reg  signed [3:0] add_ln700_5_reg_385;
-reg  signed [3:0] trunc_ln1503_6_reg_390;
-reg   [0:0] tmp_reg_396;
-wire   [3:0] lhs_V_fu_370_p2;
-reg   [3:0] lhs_V_reg_401;
+wire  signed [3:0] add_ln700_5_fu_329_p2;
+reg  signed [3:0] add_ln700_5_reg_420;
+reg  signed [3:0] trunc_ln1503_6_reg_426;
+reg   [0:0] tmp_reg_433;
+wire   [3:0] add_ln700_6_fu_374_p2;
+reg   [3:0] add_ln700_6_reg_438;
+wire   [3:0] add_ln700_7_fu_401_p2;
+reg   [3:0] add_ln700_7_reg_443;
 reg    ap_enable_reg_pp0_iter1;
 wire    ap_block_pp0_stage0_subdone;
 reg    ap_enable_reg_pp0_iter2;
 wire    ap_block_pp0_stage0_01001;
 wire    ap_block_pp0_stage0;
-wire   [1:0] trunc_ln214_fu_129_p1;
-wire   [3:0] shl_ln_fu_133_p3;
-wire   [3:0] trunc_ln1503_4_fu_125_p1;
-wire   [2:0] trunc_ln214_1_fu_157_p1;
-wire  signed [1:0] tmp_2_fu_169_p4;
-wire   [3:0] and_ln_fu_179_p3;
-wire   [3:0] trunc_ln1503_5_fu_147_p4;
-wire  signed [3:0] add_ln214_fu_141_p2;
-wire  signed [3:0] trunc_ln1503_2_fu_105_p4;
-wire  signed [3:0] sub_ln214_fu_187_p2;
-wire  signed [3:0] trunc_ln1503_fu_91_p1;
-wire  signed [3:0] add_ln214_1_fu_205_p2;
-wire  signed [3:0] trunc_ln1503_3_fu_115_p4;
-wire  signed [3:0] add_ln214_2_fu_211_p2;
-wire  signed [3:0] trunc_ln1503_1_fu_95_p4;
-wire   [3:0] mul_ln700_fu_193_p2;
-wire   [3:0] mul_ln700_1_fu_199_p2;
-wire   [3:0] mul_ln700_3_fu_223_p2;
-wire   [3:0] mul_ln700_2_fu_217_p2;
-wire   [3:0] add_ln700_1_fu_235_p2;
-wire   [3:0] add_ln700_fu_229_p2;
-wire   [0:0] trunc_ln214_2_fu_247_p1;
-wire   [3:0] shl_ln214_2_fu_251_p3;
-wire   [3:0] shl_ln214_1_fu_161_p3;
-wire  signed [3:0] sub_ln214_1_fu_259_p2;
-wire  signed [1:0] trunc_ln700_fu_271_p1;
-wire   [1:0] mul_ln700_5_fu_275_p2;
-wire  signed [3:0] add_ln214_3_fu_289_p2;
-wire  signed [3:0] add_ln214_4_fu_295_p2;
-wire   [3:0] mul_ln700_4_fu_265_p2;
-wire   [3:0] shl_ln1_fu_281_p3;
-wire   [3:0] mul_ln700_7_fu_307_p2;
-wire   [3:0] mul_ln700_6_fu_301_p2;
-wire   [3:0] add_ln700_4_fu_319_p2;
-wire   [3:0] add_ln700_3_fu_313_p2;
-wire   [3:0] and_ln214_1_fu_353_p3;
-wire  signed [3:0] sub_ln214_2_fu_360_p2;
-wire   [3:0] mul_ln700_9_fu_365_p2;
-wire   [3:0] mul_ln700_8_fu_349_p2;
+wire   [1:0] trunc_ln214_fu_133_p1;
+wire   [3:0] shl_ln_fu_137_p3;
+wire   [3:0] trunc_ln1503_4_fu_129_p1;
+wire   [2:0] trunc_ln214_1_fu_161_p1;
+wire  signed [1:0] tmp_2_fu_173_p4;
+wire   [3:0] and_ln_fu_183_p3;
+wire   [3:0] trunc_ln1503_5_fu_151_p4;
+wire  signed [3:0] add_ln214_fu_145_p2;
+wire  signed [3:0] trunc_ln1503_2_fu_109_p4;
+wire  signed [3:0] sub_ln214_fu_191_p2;
+wire  signed [3:0] trunc_ln1503_fu_95_p1;
+wire  signed [3:0] add_ln214_1_fu_209_p2;
+wire  signed [3:0] trunc_ln1503_3_fu_119_p4;
+wire  signed [3:0] add_ln214_2_fu_215_p2;
+wire  signed [3:0] trunc_ln1503_1_fu_99_p4;
+wire   [3:0] mul_ln700_fu_197_p2;
+wire   [3:0] mul_ln700_1_fu_203_p2;
+wire   [3:0] mul_ln700_3_fu_227_p2;
+wire   [3:0] mul_ln700_2_fu_221_p2;
+wire   [3:0] add_ln700_1_fu_239_p2;
+wire   [3:0] add_ln700_fu_233_p2;
+wire   [0:0] trunc_ln214_2_fu_251_p1;
+wire   [3:0] shl_ln214_2_fu_255_p3;
+wire   [3:0] shl_ln214_1_fu_165_p3;
+wire  signed [3:0] sub_ln214_1_fu_263_p2;
+wire  signed [1:0] trunc_ln700_fu_275_p1;
+wire   [1:0] mul_ln700_5_fu_279_p2;
+wire  signed [3:0] add_ln214_3_fu_293_p2;
+wire  signed [3:0] add_ln214_4_fu_299_p2;
+wire   [3:0] mul_ln700_4_fu_269_p2;
+wire   [3:0] shl_ln1_fu_285_p3;
+wire   [3:0] mul_ln700_7_fu_311_p2;
+wire   [3:0] mul_ln700_6_fu_305_p2;
+wire   [3:0] add_ln700_4_fu_323_p2;
+wire   [3:0] add_ln700_3_fu_317_p2;
+wire   [3:0] and_ln214_1_fu_357_p3;
+wire  signed [3:0] sub_ln214_2_fu_364_p2;
+wire   [3:0] mul_ln700_9_fu_369_p2;
+wire   [3:0] mul_ln700_8_fu_353_p2;
+wire  signed [3:0] add_ln214_5_fu_380_p2;
+wire  signed [3:0] add_ln214_6_fu_390_p2;
+wire   [3:0] mul_ln700_11_fu_396_p2;
+wire   [3:0] mul_ln700_10_fu_385_p2;
 reg   [0:0] ap_NS_fsm;
 wire    ap_reset_idle_pp0;
 reg    ap_idle_pp0;
@@ -129,11 +135,12 @@ end
 
 always @ (posedge ap_clk) begin
     if (((1'b0 == ap_block_pp0_stage0_11001) & (1'b1 == ap_CS_fsm_pp0_stage0))) begin
-        add_ln700_2_reg_380 <= add_ln700_2_fu_241_p2;
-        add_ln700_5_reg_385 <= add_ln700_5_fu_325_p2;
-        lhs_V_reg_401 <= lhs_V_fu_370_p2;
-        tmp_reg_396 <= nonce_V[32'd2];
-        trunc_ln1503_6_reg_390 <= {{nonce_V[5:2]}};
+        add_ln700_2_reg_414 <= add_ln700_2_fu_245_p2;
+        add_ln700_5_reg_420 <= add_ln700_5_fu_329_p2;
+        add_ln700_6_reg_438 <= add_ln700_6_fu_374_p2;
+        add_ln700_7_reg_443 <= add_ln700_7_fu_401_p2;
+        tmp_reg_433 <= nonce_input_V[32'd2];
+        trunc_ln1503_6_reg_426 <= {{nonce_input_V[5:2]}};
     end
 end
 
@@ -166,31 +173,39 @@ always @ (*) begin
     endcase
 end
 
-assign add_ln214_1_fu_205_p2 = ($signed(4'd7) + $signed(add_ln214_fu_141_p2));
+assign add_ln214_1_fu_209_p2 = ($signed(4'd7) + $signed(add_ln214_fu_145_p2));
 
-assign add_ln214_2_fu_211_p2 = ($signed(4'd14) + $signed(sub_ln214_fu_187_p2));
+assign add_ln214_2_fu_215_p2 = ($signed(4'd14) + $signed(sub_ln214_fu_191_p2));
 
-assign add_ln214_3_fu_289_p2 = ($signed(4'd7) + $signed(sub_ln214_1_fu_259_p2));
+assign add_ln214_3_fu_293_p2 = ($signed(4'd7) + $signed(sub_ln214_1_fu_263_p2));
 
-assign add_ln214_4_fu_295_p2 = ($signed(4'd14) + $signed(and_ln_fu_179_p3));
+assign add_ln214_4_fu_299_p2 = ($signed(4'd14) + $signed(and_ln_fu_183_p3));
 
-assign add_ln214_fu_141_p2 = (shl_ln_fu_133_p3 + trunc_ln1503_4_fu_125_p1);
+assign add_ln214_5_fu_380_p2 = ($signed(4'd15) + $signed(trunc_ln1503_6_reg_426));
 
-assign add_ln700_1_fu_235_p2 = (mul_ln700_3_fu_223_p2 + mul_ln700_2_fu_217_p2);
+assign add_ln214_6_fu_390_p2 = ($signed(4'd15) + $signed(sub_ln214_2_fu_364_p2));
 
-assign add_ln700_2_fu_241_p2 = (add_ln700_1_fu_235_p2 + add_ln700_fu_229_p2);
+assign add_ln214_fu_145_p2 = (shl_ln_fu_137_p3 + trunc_ln1503_4_fu_129_p1);
 
-assign add_ln700_3_fu_313_p2 = (mul_ln700_4_fu_265_p2 + shl_ln1_fu_281_p3);
+assign add_ln700_1_fu_239_p2 = (mul_ln700_3_fu_227_p2 + mul_ln700_2_fu_221_p2);
 
-assign add_ln700_4_fu_319_p2 = (mul_ln700_7_fu_307_p2 + mul_ln700_6_fu_301_p2);
+assign add_ln700_2_fu_245_p2 = (add_ln700_1_fu_239_p2 + add_ln700_fu_233_p2);
 
-assign add_ln700_5_fu_325_p2 = (add_ln700_4_fu_319_p2 + add_ln700_3_fu_313_p2);
+assign add_ln700_3_fu_317_p2 = (mul_ln700_4_fu_269_p2 + shl_ln1_fu_285_p3);
 
-assign add_ln700_fu_229_p2 = (mul_ln700_fu_193_p2 + mul_ln700_1_fu_199_p2);
+assign add_ln700_4_fu_323_p2 = (mul_ln700_7_fu_311_p2 + mul_ln700_6_fu_305_p2);
 
-assign and_ln214_1_fu_353_p3 = {{tmp_reg_396}, {3'd0}};
+assign add_ln700_5_fu_329_p2 = (add_ln700_4_fu_323_p2 + add_ln700_3_fu_317_p2);
 
-assign and_ln_fu_179_p3 = {{tmp_2_fu_169_p4}, {2'd0}};
+assign add_ln700_6_fu_374_p2 = (mul_ln700_9_fu_369_p2 + mul_ln700_8_fu_353_p2);
+
+assign add_ln700_7_fu_401_p2 = (mul_ln700_11_fu_396_p2 + mul_ln700_10_fu_385_p2);
+
+assign add_ln700_fu_233_p2 = (mul_ln700_fu_197_p2 + mul_ln700_1_fu_203_p2);
+
+assign and_ln214_1_fu_357_p3 = {{tmp_reg_433}, {3'd0}};
+
+assign and_ln_fu_183_p3 = {{tmp_2_fu_173_p4}, {2'd0}};
 
 assign ap_CS_fsm_pp0_stage0 = ap_CS_fsm[32'd0];
 
@@ -210,64 +225,66 @@ assign ap_block_state3_pp0_stage0_iter2 = ~(1'b1 == 1'b1);
 
 assign ap_enable_pp0 = (ap_idle_pp0 ^ 1'b1);
 
-assign lhs_V_fu_370_p2 = (mul_ln700_9_fu_365_p2 + mul_ln700_8_fu_349_p2);
+assign mul_ln700_10_fu_385_p2 = ($signed(add_ln214_5_fu_380_p2) * $signed(add_ln700_2_reg_414));
 
-assign mul_ln700_1_fu_199_p2 = ($signed(sub_ln214_fu_187_p2) * $signed(trunc_ln1503_fu_91_p1));
+assign mul_ln700_11_fu_396_p2 = ($signed(add_ln214_6_fu_390_p2) * $signed(add_ln700_5_reg_420));
 
-assign mul_ln700_2_fu_217_p2 = ($signed(add_ln214_1_fu_205_p2) * $signed(trunc_ln1503_3_fu_115_p4));
+assign mul_ln700_1_fu_203_p2 = ($signed(sub_ln214_fu_191_p2) * $signed(trunc_ln1503_fu_95_p1));
 
-assign mul_ln700_3_fu_223_p2 = ($signed(add_ln214_2_fu_211_p2) * $signed(trunc_ln1503_1_fu_95_p4));
+assign mul_ln700_2_fu_221_p2 = ($signed(add_ln214_1_fu_209_p2) * $signed(trunc_ln1503_3_fu_119_p4));
 
-assign mul_ln700_4_fu_265_p2 = ($signed(sub_ln214_1_fu_259_p2) * $signed(trunc_ln1503_2_fu_105_p4));
+assign mul_ln700_3_fu_227_p2 = ($signed(add_ln214_2_fu_215_p2) * $signed(trunc_ln1503_1_fu_99_p4));
 
-assign mul_ln700_5_fu_275_p2 = ($signed(trunc_ln700_fu_271_p1) * $signed(tmp_2_fu_169_p4));
+assign mul_ln700_4_fu_269_p2 = ($signed(sub_ln214_1_fu_263_p2) * $signed(trunc_ln1503_2_fu_109_p4));
 
-assign mul_ln700_6_fu_301_p2 = ($signed(add_ln214_3_fu_289_p2) * $signed(trunc_ln1503_3_fu_115_p4));
+assign mul_ln700_5_fu_279_p2 = ($signed(trunc_ln700_fu_275_p1) * $signed(tmp_2_fu_173_p4));
 
-assign mul_ln700_7_fu_307_p2 = ($signed(add_ln214_4_fu_295_p2) * $signed(trunc_ln1503_1_fu_95_p4));
+assign mul_ln700_6_fu_305_p2 = ($signed(add_ln214_3_fu_293_p2) * $signed(trunc_ln1503_3_fu_119_p4));
 
-assign mul_ln700_8_fu_349_p2 = ($signed(trunc_ln1503_6_reg_390) * $signed(add_ln700_2_reg_380));
+assign mul_ln700_7_fu_311_p2 = ($signed(add_ln214_4_fu_299_p2) * $signed(trunc_ln1503_1_fu_99_p4));
 
-assign mul_ln700_9_fu_365_p2 = ($signed(sub_ln214_2_fu_360_p2) * $signed(add_ln700_5_reg_385));
+assign mul_ln700_8_fu_353_p2 = ($signed(trunc_ln1503_6_reg_426) * $signed(add_ln700_2_reg_414));
 
-assign mul_ln700_fu_193_p2 = ($signed(add_ln214_fu_141_p2) * $signed(trunc_ln1503_2_fu_105_p4));
+assign mul_ln700_9_fu_369_p2 = ($signed(sub_ln214_2_fu_364_p2) * $signed(add_ln700_5_reg_420));
 
-assign out_port_V = lhs_V_reg_401;
+assign mul_ln700_fu_197_p2 = ($signed(add_ln214_fu_145_p2) * $signed(trunc_ln1503_2_fu_109_p4));
 
-assign shl_ln1_fu_281_p3 = {{mul_ln700_5_fu_275_p2}, {2'd0}};
+assign out_port_V = {{add_ln700_7_reg_443}, {add_ln700_6_reg_438}};
 
-assign shl_ln214_1_fu_161_p3 = {{trunc_ln214_1_fu_157_p1}, {1'd0}};
+assign shl_ln1_fu_285_p3 = {{mul_ln700_5_fu_279_p2}, {2'd0}};
 
-assign shl_ln214_2_fu_251_p3 = {{trunc_ln214_2_fu_247_p1}, {3'd0}};
+assign shl_ln214_1_fu_165_p3 = {{trunc_ln214_1_fu_161_p1}, {1'd0}};
 
-assign shl_ln_fu_133_p3 = {{trunc_ln214_fu_129_p1}, {2'd0}};
+assign shl_ln214_2_fu_255_p3 = {{trunc_ln214_2_fu_251_p1}, {3'd0}};
 
-assign sub_ln214_1_fu_259_p2 = (shl_ln214_2_fu_251_p3 - shl_ln214_1_fu_161_p3);
+assign shl_ln_fu_137_p3 = {{trunc_ln214_fu_133_p1}, {2'd0}};
 
-assign sub_ln214_2_fu_360_p2 = ($signed(and_ln214_1_fu_353_p3) - $signed(trunc_ln1503_6_reg_390));
+assign sub_ln214_1_fu_263_p2 = (shl_ln214_2_fu_255_p3 - shl_ln214_1_fu_165_p3);
 
-assign sub_ln214_fu_187_p2 = (and_ln_fu_179_p3 - trunc_ln1503_5_fu_147_p4);
+assign sub_ln214_2_fu_364_p2 = ($signed(and_ln214_1_fu_357_p3) - $signed(trunc_ln1503_6_reg_426));
 
-assign tmp_2_fu_169_p4 = {{nonce_V[2:1]}};
+assign sub_ln214_fu_191_p2 = (and_ln_fu_183_p3 - trunc_ln1503_5_fu_151_p4);
 
-assign trunc_ln1503_1_fu_95_p4 = {{in_port_V[7:4]}};
+assign tmp_2_fu_173_p4 = {{nonce_input_V[2:1]}};
 
-assign trunc_ln1503_2_fu_105_p4 = {{in_port_V[11:8]}};
+assign trunc_ln1503_1_fu_99_p4 = {{in_port_V[7:4]}};
 
-assign trunc_ln1503_3_fu_115_p4 = {{in_port_V[15:12]}};
+assign trunc_ln1503_2_fu_109_p4 = {{in_port_V[11:8]}};
 
-assign trunc_ln1503_4_fu_125_p1 = nonce_V[3:0];
+assign trunc_ln1503_3_fu_119_p4 = {{in_port_V[15:12]}};
 
-assign trunc_ln1503_5_fu_147_p4 = {{nonce_V[4:1]}};
+assign trunc_ln1503_4_fu_129_p1 = nonce_input_V[3:0];
 
-assign trunc_ln1503_fu_91_p1 = in_port_V[3:0];
+assign trunc_ln1503_5_fu_151_p4 = {{nonce_input_V[4:1]}};
 
-assign trunc_ln214_1_fu_157_p1 = nonce_V[2:0];
+assign trunc_ln1503_fu_95_p1 = in_port_V[3:0];
 
-assign trunc_ln214_2_fu_247_p1 = nonce_V[0:0];
+assign trunc_ln214_1_fu_161_p1 = nonce_input_V[2:0];
 
-assign trunc_ln214_fu_129_p1 = nonce_V[1:0];
+assign trunc_ln214_2_fu_251_p1 = nonce_input_V[0:0];
 
-assign trunc_ln700_fu_271_p1 = in_port_V[1:0];
+assign trunc_ln214_fu_133_p1 = nonce_input_V[1:0];
+
+assign trunc_ln700_fu_275_p1 = in_port_V[1:0];
 
 endmodule //kalman
