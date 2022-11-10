@@ -9,7 +9,7 @@ typedef ap_uint<5> index_t;
 void ellipf_seq(dint_8x in_ports, dint_8x &out_ports)
 {
 #pragma HLS interface ap_ctrl_none port=return
-#pragma HLS allocation instances=add limit=2 operation
+#pragma HLS allocation instances=add limit=12 operation
 	dint n1, n2, n3, n4, n5, n6, n7;
 	dint n8, n9, n10, n11, n12, n13;
 	dint n14, n15, n16, n17, n18, n19;
@@ -17,6 +17,9 @@ void ellipf_seq(dint_8x in_ports, dint_8x &out_ports)
 	dint n26, n27, n28, n29;
 
     for (index_t i = 0; i < N; ++i) {
+    	//#pragma HLS unroll factor=4
+    	//#pragma HLS latency min=1 max=1
+    	//#pragma HLS pipeline II=2
         dint inp = in_ports >> 0;
         dint sv2 = in_ports >> 4;
         dint sv13 = in_ports >> 8;
@@ -67,14 +70,14 @@ void ellipf_seq(dint_8x in_ports, dint_8x &out_ports)
         outp = n24;
         // in_ports = (outp << 0) | (sv2_o << 4) | (sv13_o << 8) | (sv18_o << 12) |
         //     (sv26_o << 16) | (sv33_o << 20) | (sv38_o << 24) | (sv39_o << 28);
-        in_ports = 
-            ((dint_8x)outp << 0) | 
-            ((dint_8x)sv2_o << 4) | 
-            ((dint_8x)sv13_o << 8) | 
+        in_ports =
+            ((dint_8x)outp << 0) |
+            ((dint_8x)sv2_o << 4) |
+            ((dint_8x)sv13_o << 8) |
             ((dint_8x)sv18_o << 12) |
-            ((dint_8x)sv26_o << 16) | 
-            ((dint_8x)sv33_o << 20) | 
-            ((dint_8x)sv38_o << 24) | 
+            ((dint_8x)sv26_o << 16) |
+            ((dint_8x)sv33_o << 20) |
+            ((dint_8x)sv38_o << 24) |
             ((dint_8x)sv39_o << 28);
     }
     out_ports = in_ports;

@@ -13,6 +13,9 @@ void diffeq(dint_5x vars, dint &Xoutport, dint &Youtport, dint &Uoutport)
 	dint dx_var = vars >> 16;
 	dint x1, y1, t1, t2, t3, t4, t5, t6;
     while (x_var < a_var) {
+    	//#pragma HLS unroll factor=4
+    	#pragma HLS latency min=1 max=1
+    	//#pragma HLS pipeline II=1
     	t1 = u_var * dx_var;
     	t2 = 3 * x_var;
     	t3 = 3 * y_var;
