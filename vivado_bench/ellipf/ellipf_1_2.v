@@ -7,7 +7,7 @@
 
 `timescale 1 ns / 1 ps 
 
-(* CORE_GENERATION_INFO="ellipf,hls_ip_2020_1,{HLS_INPUT_TYPE=cxx,HLS_INPUT_FLOAT=0,HLS_INPUT_FIXED=1,HLS_INPUT_PART=xc7k70t-fbv676-1,HLS_INPUT_CLOCK=10.000000,HLS_INPUT_ARCH=others,HLS_SYN_CLOCK=5.280000,HLS_SYN_LAT=1,HLS_SYN_TPT=none,HLS_SYN_MEM=0,HLS_SYN_DSP=0,HLS_SYN_FF=17,HLS_SYN_LUT=142,HLS_VERSION=2020_1}" *)
+(* CORE_GENERATION_INFO="ellipf,hls_ip_2020_1,{HLS_INPUT_TYPE=cxx,HLS_INPUT_FLOAT=0,HLS_INPUT_FIXED=1,HLS_INPUT_PART=xc7k70t-fbv676-1,HLS_INPUT_CLOCK=10.000000,HLS_INPUT_ARCH=others,HLS_SYN_CLOCK=7.405000,HLS_SYN_LAT=1,HLS_SYN_TPT=none,HLS_SYN_MEM=0,HLS_SYN_DSP=0,HLS_SYN_FF=32,HLS_SYN_LUT=255,HLS_VERSION=2020_1}" *)
 
 module ellipf (
         ap_clk,
@@ -28,25 +28,49 @@ output   out_ports_V_ap_vld;
 
 reg out_ports_V_ap_vld;
 
-wire   [3:0] grp_fu_75_p2;
-reg   [3:0] n2_V_reg_100;
+wire   [3:0] inp_V_fu_73_p1;
+reg   [3:0] inp_V_reg_314;
 (* fsm_encoding = "none" *) reg   [1:0] ap_CS_fsm;
 wire    ap_CS_fsm_state1;
-wire   [3:0] grp_fu_74_p2;
-reg   [3:0] add_ln209_1_reg_104;
-reg   [3:0] sv2_V_reg_227;
-reg   [2:0] tmp_1_reg_232;
+wire   [3:0] sv39_V_fu_117_p4;
+reg   [3:0] sv39_V_reg_319;
+wire   [3:0] n1_V_fu_127_p2;
+reg   [3:0] n1_V_reg_325;
+wire   [3:0] n2_V_fu_133_p2;
+reg   [3:0] n2_V_reg_331;
+wire   [3:0] n3_V_fu_139_p2;
+reg   [3:0] n3_V_reg_337;
+wire   [3:0] n5_V_fu_151_p2;
+reg   [3:0] n5_V_reg_343;
+reg   [2:0] tmp_reg_350;
+reg   [2:0] tmp_1_reg_355;
 wire    ap_CS_fsm_state2;
-reg   [3:0] grp_fu_73_p0;
-wire   [3:0] factor1_fu_214_p3;
-reg   [3:0] grp_fu_73_p1;
-wire   [3:0] factor_fu_207_p2;
-wire   [3:0] grp_fu_73_p2;
-reg   [3:0] grp_fu_74_p1;
-wire   [3:0] inp_V_fu_132_p1;
-reg   [3:0] grp_fu_75_p0;
-reg   [3:0] grp_fu_75_p1;
-wire   [3:0] empty_fu_201_p2;
+wire   [3:0] sv2_V_fu_77_p4;
+wire   [3:0] sv33_V_fu_107_p4;
+wire   [3:0] sv13_V_fu_87_p4;
+wire   [3:0] sv26_V_fu_97_p4;
+wire   [3:0] add_ln209_fu_145_p2;
+wire   [3:0] n8_V_fu_177_p2;
+wire   [3:0] add_ln209_4_fu_185_p2;
+wire   [3:0] n9_V_fu_181_p2;
+wire   [3:0] add_ln209_6_fu_195_p2;
+wire   [3:0] n15_V_fu_190_p2;
+wire   [3:0] n16_V_fu_200_p2;
+wire   [3:0] factor_fu_221_p3;
+wire   [3:0] add_ln209_11_fu_228_p2;
+wire   [3:0] factor1_fu_240_p3;
+wire   [3:0] n19_V_fu_210_p2;
+wire   [3:0] n17_V_fu_205_p2;
+wire   [3:0] add_ln209_14_fu_253_p2;
+wire   [3:0] n28_V_fu_234_p2;
+wire   [3:0] add_ln209_17_fu_270_p2;
+wire   [3:0] n29_V_fu_247_p2;
+wire   [3:0] n20_V_fu_216_p2;
+wire   [3:0] sv39_o_V_fu_287_p2;
+wire   [3:0] sv33_o_V_fu_281_p2;
+wire   [3:0] sv26_o_V_fu_275_p2;
+wire   [3:0] sv13_o_V_fu_264_p2;
+wire   [3:0] sv2_o_V_fu_258_p2;
 reg   [1:0] ap_NS_fsm;
 
 // power-on initialization
@@ -64,60 +88,14 @@ end
 
 always @ (posedge ap_clk) begin
     if ((1'b1 == ap_CS_fsm_state1)) begin
-        add_ln209_1_reg_104 <= grp_fu_74_p2;
-        n2_V_reg_100 <= grp_fu_75_p2;
-        sv2_V_reg_227 <= {{in_ports_V[7:4]}};
-        tmp_1_reg_232 <= {{in_ports_V[30:28]}};
-    end
-end
-
-always @ (*) begin
-    if ((1'b1 == ap_CS_fsm_state2)) begin
-        grp_fu_73_p0 = factor1_fu_214_p3;
-    end else if ((1'b1 == ap_CS_fsm_state1)) begin
-        grp_fu_73_p0 = {{in_ports_V[19:16]}};
-    end else begin
-        grp_fu_73_p0 = 'bx;
-    end
-end
-
-always @ (*) begin
-    if ((1'b1 == ap_CS_fsm_state2)) begin
-        grp_fu_73_p1 = factor_fu_207_p2;
-    end else if ((1'b1 == ap_CS_fsm_state1)) begin
-        grp_fu_73_p1 = {{in_ports_V[11:8]}};
-    end else begin
-        grp_fu_73_p1 = 'bx;
-    end
-end
-
-always @ (*) begin
-    if ((1'b1 == ap_CS_fsm_state2)) begin
-        grp_fu_74_p1 = sv2_V_reg_227;
-    end else if ((1'b1 == ap_CS_fsm_state1)) begin
-        grp_fu_74_p1 = inp_V_fu_132_p1;
-    end else begin
-        grp_fu_74_p1 = 'bx;
-    end
-end
-
-always @ (*) begin
-    if ((1'b1 == ap_CS_fsm_state2)) begin
-        grp_fu_75_p0 = grp_fu_74_p2;
-    end else if ((1'b1 == ap_CS_fsm_state1)) begin
-        grp_fu_75_p0 = {{in_ports_V[23:20]}};
-    end else begin
-        grp_fu_75_p0 = 'bx;
-    end
-end
-
-always @ (*) begin
-    if ((1'b1 == ap_CS_fsm_state2)) begin
-        grp_fu_75_p1 = add_ln209_1_reg_104;
-    end else if ((1'b1 == ap_CS_fsm_state1)) begin
-        grp_fu_75_p1 = {{in_ports_V[31:28]}};
-    end else begin
-        grp_fu_75_p1 = 'bx;
+        inp_V_reg_314 <= inp_V_fu_73_p1;
+        n1_V_reg_325 <= n1_V_fu_127_p2;
+        n2_V_reg_331 <= n2_V_fu_133_p2;
+        n3_V_reg_337 <= n3_V_fu_139_p2;
+        n5_V_reg_343 <= n5_V_fu_151_p2;
+        sv39_V_reg_319 <= {{in_ports_V[31:28]}};
+        tmp_1_reg_355 <= {{in_ports_V[26:24]}};
+        tmp_reg_350 <= {{in_ports_V[14:12]}};
     end
 end
 
@@ -143,24 +121,74 @@ always @ (*) begin
     endcase
 end
 
+assign add_ln209_11_fu_228_p2 = (n15_V_fu_190_p2 + factor_fu_221_p3);
+
+assign add_ln209_14_fu_253_p2 = (n17_V_fu_205_p2 + inp_V_reg_314);
+
+assign add_ln209_17_fu_270_p2 = (n9_V_fu_181_p2 + n5_V_reg_343);
+
+assign add_ln209_4_fu_185_p2 = (n8_V_fu_177_p2 + n1_V_reg_325);
+
+assign add_ln209_6_fu_195_p2 = (n9_V_fu_181_p2 + sv39_V_reg_319);
+
+assign add_ln209_fu_145_p2 = (n3_V_fu_139_p2 + sv26_V_fu_97_p4);
+
 assign ap_CS_fsm_state1 = ap_CS_fsm[32'd0];
 
 assign ap_CS_fsm_state2 = ap_CS_fsm[32'd1];
 
-assign empty_fu_201_p2 = n2_V_reg_100 << 4'd2;
+assign factor1_fu_240_p3 = {{tmp_1_reg_355}, {1'd0}};
 
-assign factor1_fu_214_p3 = {{tmp_1_reg_232}, {1'd0}};
+assign factor_fu_221_p3 = {{tmp_reg_350}, {1'd0}};
 
-assign factor_fu_207_p2 = (empty_fu_201_p2 - n2_V_reg_100);
+assign inp_V_fu_73_p1 = in_ports_V[3:0];
 
-assign grp_fu_73_p2 = (grp_fu_73_p0 + grp_fu_73_p1);
+assign n15_V_fu_190_p2 = (n3_V_reg_337 + add_ln209_4_fu_185_p2);
 
-assign grp_fu_74_p2 = (grp_fu_73_p2 + grp_fu_74_p1);
+assign n16_V_fu_200_p2 = (n2_V_reg_331 + add_ln209_6_fu_195_p2);
 
-assign grp_fu_75_p2 = (grp_fu_75_p0 + grp_fu_75_p1);
+assign n17_V_fu_205_p2 = (n1_V_reg_325 + n15_V_fu_190_p2);
 
-assign inp_V_fu_132_p1 = in_ports_V[3:0];
+assign n19_V_fu_210_p2 = (n9_V_fu_181_p2 + n16_V_fu_200_p2);
 
-assign out_ports_V = grp_fu_75_p2;
+assign n1_V_fu_127_p2 = (inp_V_fu_73_p1 + sv2_V_fu_77_p4);
+
+assign n20_V_fu_216_p2 = (sv39_V_reg_319 + n16_V_fu_200_p2);
+
+assign n28_V_fu_234_p2 = (n8_V_fu_177_p2 + add_ln209_11_fu_228_p2);
+
+assign n29_V_fu_247_p2 = (factor1_fu_240_p3 + n19_V_fu_210_p2);
+
+assign n2_V_fu_133_p2 = (sv33_V_fu_107_p4 + sv39_V_fu_117_p4);
+
+assign n3_V_fu_139_p2 = (sv13_V_fu_87_p4 + n1_V_fu_127_p2);
+
+assign n5_V_fu_151_p2 = (n2_V_fu_133_p2 + add_ln209_fu_145_p2);
+
+assign n8_V_fu_177_p2 = (n3_V_reg_337 + n5_V_reg_343);
+
+assign n9_V_fu_181_p2 = (n2_V_reg_331 + n5_V_reg_343);
+
+assign out_ports_V = {{{{{{{{sv39_o_V_fu_287_p2}, {n29_V_fu_247_p2}}, {sv33_o_V_fu_281_p2}}, {sv26_o_V_fu_275_p2}}, {n28_V_fu_234_p2}}, {sv13_o_V_fu_264_p2}}, {sv2_o_V_fu_258_p2}}, {n20_V_fu_216_p2}};
+
+assign sv13_V_fu_87_p4 = {{in_ports_V[11:8]}};
+
+assign sv13_o_V_fu_264_p2 = (n17_V_fu_205_p2 + n28_V_fu_234_p2);
+
+assign sv26_V_fu_97_p4 = {{in_ports_V[19:16]}};
+
+assign sv26_o_V_fu_275_p2 = (n8_V_fu_177_p2 + add_ln209_17_fu_270_p2);
+
+assign sv2_V_fu_77_p4 = {{in_ports_V[7:4]}};
+
+assign sv2_o_V_fu_258_p2 = (n15_V_fu_190_p2 + add_ln209_14_fu_253_p2);
+
+assign sv33_V_fu_107_p4 = {{in_ports_V[23:20]}};
+
+assign sv33_o_V_fu_281_p2 = (n19_V_fu_210_p2 + n29_V_fu_247_p2);
+
+assign sv39_V_fu_117_p4 = {{in_ports_V[31:28]}};
+
+assign sv39_o_V_fu_287_p2 = (n16_V_fu_200_p2 + n20_V_fu_216_p2);
 
 endmodule //ellipf
