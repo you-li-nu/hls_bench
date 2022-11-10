@@ -67,6 +67,15 @@ void ellipf(dint_8x in_ports, dint_8x &out_ports)
 	sv38_o = n29;
 	sv39_o = n16 + n24;
 	outp = n24;
-    out_ports = (outp << 0) | (sv2_o << 4) | (sv13_o << 8) | (sv18_o << 12) |
-        (sv26_o << 16) | (sv33_o << 20) | (sv38_o << 24) | (sv39_o << 28);
+    // out_ports = (outp << 0) | (sv2_o << 4) | (sv13_o << 8) | (sv18_o << 12) |
+        // (sv26_o << 16) | (sv33_o << 20) | (sv38_o << 24) | (sv39_o << 28);
+	out_ports = 
+		((dint_8x)outp << 0) | 
+		((dint_8x)sv2_o << 4) | 
+		((dint_8x)sv13_o << 8) | 
+		((dint_8x)sv18_o << 12) |
+		((dint_8x)sv26_o << 16) | 
+		((dint_8x)sv33_o << 20) | 
+		((dint_8x)sv38_o << 24) | 
+		((dint_8x)sv39_o << 28);
 }

@@ -15,7 +15,7 @@ inline word_t load_K_matrix(nonce_t nonce, index_t i, index_t j) { return (nonce
 inline word_t load_G_matrix(nonce_t nonce, index_t i, index_t j) { return (nonce >> 2) * (6 * j + 1) - i; }
 
 
-void kalman(nonce_t nonce, word_4x_t in_port, word_2x_t &out_port)
+void kalman(nonce_t nonce_input, word_4x_t in_port, word_2x_t &out_port)
 {
 #pragma HLS interface ap_ctrl_none port=return
 #pragma HLS pipeline II=2
@@ -27,6 +27,9 @@ void kalman(nonce_t nonce, word_4x_t in_port, word_2x_t &out_port)
 
     // load state vector X:
     word_t x[2] = { in_port >> 8, in_port >> 12 };
+
+    // load nonce:
+    nonce_t nonce = nonce_input;
 
     // compute next state vector X:
     word_t x_next[2] = { 0, 0 };
@@ -50,5 +53,8 @@ void kalman(nonce_t nonce, word_4x_t in_port, word_2x_t &out_port)
     }
 
     // output vector V:
-    out_port = v[0] | (v[1] << 4);
+    // out_port = v[0] | (v[1] << 4);
+    out_port = 
+        ((word_2x_t)v[0] << 0) |
+        ((word_2x_t)v[1] << 4);
 }
