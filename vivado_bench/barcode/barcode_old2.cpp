@@ -47,7 +47,7 @@ void barcode(seed_t seed, addr_t num, bool &vld, bool &eoc, bool &memw, word_t &
     word_t width = 0; // width of the current stripe
     while (actnum != num) {
 		//#pragma HLS unroll factor=2
-		//#pragma HLS latency min=1 max=1
+		#pragma HLS latency min=1 max=1
     	//#pragma HLS pipeline II=1
         seed_gen(seed, video);
         if (video != flag) {
@@ -68,11 +68,9 @@ void barcode(seed_t seed, addr_t num, bool &vld, bool &eoc, bool &memw, word_t &
     }
 
     // write the width of the last stripe to the memory:
-    /*
     eoc = true;
     memw = true;
     data = width;
     addr = actnum;
     vld = true;
-    */
 }
