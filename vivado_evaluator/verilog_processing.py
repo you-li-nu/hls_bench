@@ -11,7 +11,7 @@ def _is_reset_signal(name: str):
 
 def _is_valid_signal(name: str):
     "heuristic to determine if a signal is a valid"
-    return name.endswith("_vld")
+    return name.endswith("vld")
 
 
 class VerilogModule:
@@ -119,8 +119,8 @@ class VerilogFile:
                 f.write(line + "\n")
 
 
-def remove_reset_signal(src: VerilogFile) -> VerilogFile:
-    "Remove reset signal from every module in `src`, setting them to constant zero."
+def remove_reset_signal(src: VerilogFile, recurring: bool) -> VerilogFile:
+    "Remove reset signal from every module in `src`, setting them to constant zero, or one once valid."
     dst = VerilogFile()
     dst.raw_lines.append("// Processed by function `remove_reset_signal` in `verilog_tricks.py`.")
     curr_module_index = 0
@@ -139,7 +139,8 @@ def remove_reset_signal(src: VerilogFile) -> VerilogFile:
                 line = src.raw_lines[curr_src_line_index]
                 if line.startswith("input ") and m.reset_input_name in line: 
                     dst.raw_lines.append(line.replace("input ", "wire "))  # change reset signal to wire
-                    dst.raw_lines.append(f"assign {m.reset_input_name} = 1'b0;")  # assign reset to constant 0
+                    sig = m.valid_output_name if recurring else "1'b0" 
+                    dst.raw_lines.append(f"assign {m.reset_input_name} = {sig};")  # assign reset to constant 0 / valid signal
                 else:
                     dst.raw_lines.append(line)
                 curr_src_line_index += 1
@@ -168,7 +169,7 @@ def merge_valid_signals(src: VerilogFile) -> VerilogFile:
                 name = line.strip().strip(",")
                 if name.endswith("(") or name.endswith(");") or len(name) == 0:  # non-name line, keep it
                     dst.raw_lines.append(line)
-                elif name.endswith("_vld"):  # skip the line
+                elif name.endswith("vld"):  # skip the line
                     valid_signal_names.append(name)
                 else:
                     dst.raw_lines.append(f"{name},")
@@ -303,6 +304,13 @@ def construct_kairos(src_a: VerilogFile, src_b: VerilogFile, fast_slow_mode: boo
     dst.raw_lines.append(f"input {clock_input_name};")
     dst.raw_lines.append(f"output {UNSAFE_SINGAL_NAME};")
 
+    dst.raw_lines.append("reg _setup;")
+    dst.raw_lines.append("initial _setup = 1'b0;")
+    dst.raw_lines.append(f"always @ (posedge {clock_input_name}) _setup <= 1'b1;")
+    for name in normal_input_names:
+        dst.raw_lines.append(f"reg {_wire_str(name, width_map)}_internal;")
+        dst.raw_lines.append(f"always @ (posedge {clock_input_name}) if (!_setup) {name}_internal <= {name};")
+
     miter_names = []
     for name in normal_output_names:
         dst.raw_lines.append(f"wire {_wire_str(name, width_map)}_A;")
@@ -314,11 +322,11 @@ def construct_kairos(src_a: VerilogFile, src_b: VerilogFile, fast_slow_mode: boo
     dst.raw_lines.append(f"wire {valid_output_name}_B;")
     dst.raw_lines.append(f"wire {CLK_ENABLE_SIGNAL_NAME}_A;")
     dst.raw_lines.append(f"wire {CLK_ENABLE_SIGNAL_NAME}_B;")
-    dst.raw_lines.append(f"assign {CLK_ENABLE_SIGNAL_NAME}_A = ~{valid_output_name}_A | {valid_output_name}_B;")
+    dst.raw_lines.append(f"assign {CLK_ENABLE_SIGNAL_NAME}_A = _setup & (~{valid_output_name}_A | {valid_output_name}_B);")
     if fast_slow_mode:
-        dst.raw_lines.append(f"assign {CLK_ENABLE_SIGNAL_NAME}_B = 1;")
+        dst.raw_lines.append(f"assign {CLK_ENABLE_SIGNAL_NAME}_B = _setup;")
     else:
-        dst.raw_lines.append(f"assign {CLK_ENABLE_SIGNAL_NAME}_B = ~{valid_output_name}_B | {valid_output_name}_A;")
+        dst.raw_lines.append(f"assign {CLK_ENABLE_SIGNAL_NAME}_B = _setup & (~{valid_output_name}_B | {valid_output_name}_A);")
     dst.raw_lines.append(f"wire divergent;")
     dst.raw_lines.append(f"assign divergent = ~({' & '.join(miter_names)});")
     dst.raw_lines.append(f"assign {UNSAFE_SINGAL_NAME} = {valid_output_name}_A & {valid_output_name}_B & divergent;")
@@ -327,7 +335,7 @@ def construct_kairos(src_a: VerilogFile, src_b: VerilogFile, fast_slow_mode: boo
     dst.raw_lines.append(f"    .{clock_input_name}({clock_input_name}),")
     dst.raw_lines.append(f"    .{CLK_ENABLE_SIGNAL_NAME}({CLK_ENABLE_SIGNAL_NAME}_A),")
     for name in normal_input_names:
-        dst.raw_lines.append(f"    .{name}({name}),")
+        dst.raw_lines.append(f"    .{name}({name}_internal),")
     for name in normal_output_names:
         dst.raw_lines.append(f"    .{name}({name}_A),")
     dst.raw_lines.append(f"    .{valid_output_name}({valid_output_name}_A)")
@@ -337,7 +345,7 @@ def construct_kairos(src_a: VerilogFile, src_b: VerilogFile, fast_slow_mode: boo
     dst.raw_lines.append(f"    .{clock_input_name}({clock_input_name}),")
     dst.raw_lines.append(f"    .{CLK_ENABLE_SIGNAL_NAME}({CLK_ENABLE_SIGNAL_NAME}_B),")
     for name in normal_input_names:
-        dst.raw_lines.append(f"    .{name}({name}),")
+        dst.raw_lines.append(f"    .{name}({name}_internal),")
     for name in normal_output_names:
         dst.raw_lines.append(f"    .{name}({name}_B),")
     dst.raw_lines.append(f"    .{valid_output_name}({valid_output_name}_B)")
@@ -352,10 +360,10 @@ def kairos_preprocess(src_file_1: str, src_file_2: str, dst_file: str, fast_slow
     "Main verilog-to-verilog preprocess for kairos-style equivalence checking. Returns top-level module name."
     src_1 = VerilogFile()
     src_1.read_from_file(src_file_1)
-    middle_1 = add_clk_enable_signal(remove_reset_signal(merge_valid_signals(src_1)))
+    middle_1 = add_clk_enable_signal(remove_reset_signal(merge_valid_signals(src_1), True))
     src_2 = VerilogFile()
     src_2.read_from_file(src_file_2)
-    middle_2 = add_clk_enable_signal(remove_reset_signal(merge_valid_signals(src_2)))
+    middle_2 = add_clk_enable_signal(remove_reset_signal(merge_valid_signals(src_2), True))
     dst = construct_kairos(middle_1, middle_2, fast_slow_mode)
     dst.write_to_file(dst_file)
     return dst.modules[-1].module_name
@@ -393,13 +401,13 @@ def split_fsm_into_bits(src: VerilogFile) -> VerilogFile:
     curr_fsm_width = None
     curr_fsm_bit_names = None
     for line in src.raw_lines:
-        if "reg " in line and "_CS_fsm" in line:  # FSM register definition
+        if "reg" in line.split() and "_CS_fsm" in line:  # FSM register definition
             tokens = line.split()
             assert tokens[-1][-1] == ";"
             curr_fsm_name = tokens[-1][:-1]  # remove the semicolon
             assert tokens[-2][0] == "[" and tokens[-2][-3:] == ":0]"
             curr_fsm_width = int(tokens[-2][1:-3]) + 1  # e.g. "[3:0]"[1:-3] == "3"
-            assert curr_fsm_width > 1
+            # assert curr_fsm_width > 1
             curr_fsm_bit_names = [f"{curr_fsm_name}_bit_{i}" for i in range(curr_fsm_width)]
             for bit_name in curr_fsm_bit_names:
                 dst.raw_lines.append(f"reg {bit_name};")
@@ -432,7 +440,7 @@ def ours_preprocess(src_file: str, dst_file: str):
     "Main verilog-to-verilog preprocess for files in our equivalence checker."
     src = VerilogFile()
     src.read_from_file(src_file)
-    dst = split_fsm_into_bits(remove_nondeterminism(remove_reset_signal(merge_valid_signals(src))))
+    dst = split_fsm_into_bits(remove_nondeterminism(remove_reset_signal(merge_valid_signals(src), False)))
     dst.write_to_file(dst_file)
 
 
@@ -471,15 +479,22 @@ def change_vivado_width_with_config(src_file: str, dst_file: str, src_width: int
     with open(src_file, "r") as f:
         lines = f.readlines()
 
-    fsm_str = "_fsm"
+    safe_changers: list[tuple[str, str]] = [None] * (2 * len(changers))
+    i = 0
+    for name, changer in changers.items():
+        temp_str = f"$({i}:{hash(name)})$"
+        safe_changers[i] = (name, temp_str)
+        safe_changers[i + len(changers)] = (temp_str, changer(dst_width))
+        i += 1
 
-    for key, changer in changers.items():
+    fsm_str = "_fsm"
+    for key, value in safe_changers:
         new_lines = []
         for line in lines:
             if fsm_str in line: # don't change FSM width
                 new_lines.append(line)
             else:
-                new_lines.append(line.replace(key, changer(dst_width)))
+                new_lines.append(line.replace(key, value))
         lines = new_lines
 
     with open(dst_file, "w") as f:
