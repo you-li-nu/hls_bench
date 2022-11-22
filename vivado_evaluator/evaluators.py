@@ -70,6 +70,7 @@ def _verilog_to_aiger(verilog_file: str, aiger_file: str, top_level_name: str):
         "flatten",
         "aigmap",
         f"write_aiger {aiger_file}",
+        # f"write_aiger -symbols -ascii {aiger_file}",
     ]
     if os.system(f"{config.YOSYS_CMD} -q -p '{'; '.join(yosys_commands)}'") != 0:
         raise RuntimeError("Yosys failed.")
@@ -275,9 +276,10 @@ def do_task(tool_name: str, folder: str, name_1: str, name_2: str, log_file: str
 # }
 
 if __name__ == "__main__":
-    pass
-    # do_task("word-swap", "../vivado_bench/gcd", "gcd_2.v", "gcd_1_1b.v", "temp4.log")
-    # do_task("word-even", "../vivado_bench/gcd", "gcd_1.v", "gcd_1_1.v", "temp-even.log")
+    # pass
+    do_task("nuxmv", "../guannan/exp_2/kalman/bench", "kalman_1_2_1.v", "kalman_1_2_1.v", "temp1.log")
+    # do_task("word-even", "../vivado_bench/ellipf", "ellipf_1_2.v", "ellipf_2_3_2.v", "temp2.log")
+    # do_task("nuxmv", "../guannan/exp_2/counter/bench", "counter_1.v", "counter_2.v", "temp.log")
 
     # files = sorted(os.listdir("../vivado_bench/gcd"))
     # eq_table = []

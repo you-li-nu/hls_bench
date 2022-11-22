@@ -167,6 +167,11 @@ class Task:
     def to_str(self) -> str:
         return f"({self.group_name}, {self.verilog_1_basename}, {self.verilog_2_basename}, {self.evaluator_name}, {self.bit_widths})"
 
+    def _is_non_equivalent(self, log_path: str) -> bool:
+        with open(log_path, "r") as f:
+            result = "Nonequivalent." in f.read()
+        return result
+
     def do(self):
         "actually do the task; NOTE: once timeout, skip the rest. NOTE: avoid race condition."
         folder = os.path.join(GROUP_PATH, self.group_name, BENCH_PATH)
@@ -185,6 +190,9 @@ class Task:
                     os.remove(file)
             if time_spent is None:  # don't waste time for longer bit widths
                 break
+            if self._is_non_equivalent(self._get_log_path(bit_width)):  # don't waste time for non-equivalent instances either
+                break
+
 
     def is_done(self) -> bool:
         "check if the task is done, so we does not redo."
@@ -220,6 +228,52 @@ class TaskList:
                 self.tasks.append(Task(group_name, basename_i, basename_j, "nuxmv", kairos_bit_widths))
         return self
 
+    def create_alt(self, group_name: str) -> "TaskList":
+        "No fast table, just do all. No Kairos involved either."
+        word_bit_widths = [8, 16, 32]
+        basenames = sorted(os.listdir(os.path.join(GROUP_PATH, group_name, BENCH_PATH)))
+        self.tasks = []
+        for i in range(len(basenames)):
+            basename_i = basenames[i]
+            for j in range(i + 1, len(basenames)):
+                basename_j = basenames[j]
+                self.tasks.append(Task(group_name, basename_i, basename_j, "word-fast", word_bit_widths))
+                self.tasks.append(Task(group_name, basename_j, basename_i, "word-fast", word_bit_widths))
+                self.tasks.append(Task(group_name, basename_i, basename_j, "word-even", word_bit_widths))
+                self.tasks.append(Task(group_name, basename_j, basename_i, "word-even", word_bit_widths))
+        return self
+
+    def create_alt_alt(self, group_name: str) -> "TaskList":
+        "No fast table. ONLY KAIROS involved."
+        word_bit_widths = [4, 5, 6, 7, 8, 16, 32]
+        basenames = sorted(os.listdir(os.path.join(GROUP_PATH, group_name, BENCH_PATH)))
+        self.tasks = []
+        for i in range(len(basenames)):
+            basename_i = basenames[i]
+            for j in range(i + 1, len(basenames)):
+                basename_j = basenames[j]
+                self.tasks.append(Task(group_name, basename_i, basename_j, "nuxmv", word_bit_widths))
+        return self
+
+    def create_alt_alt_alt(self, group_name: str) -> "TaskList":
+        "alt + alt_alt"
+        word_bit_widths = [8, 16, 32]
+        kairos_word_bit_widths = [4, 5, 6, 7, 8, 16, 32]
+        basenames = sorted(os.listdir(os.path.join(GROUP_PATH, group_name, BENCH_PATH)))
+        self.tasks = []
+        for i in range(len(basenames)):
+            basename_i = basenames[i]
+            for j in range(i + 1, len(basenames)):
+                basename_j = basenames[j]
+                self.tasks.append(Task(group_name, basename_i, basename_j, "word-fast", word_bit_widths))
+                self.tasks.append(Task(group_name, basename_j, basename_i, "word-fast", word_bit_widths))
+                self.tasks.append(Task(group_name, basename_i, basename_j, "word-even", word_bit_widths))
+                self.tasks.append(Task(group_name, basename_j, basename_i, "word-even", word_bit_widths))
+
+                self.tasks.append(Task(group_name, basename_i, basename_j, "nuxmv", kairos_word_bit_widths))
+        return self
+
+
     def load_from_file(self, file: str) -> "TaskList":
         def decode_task(task: dict) -> Task:
             return Task(
@@ -250,12 +304,13 @@ class TaskList:
 
 def preprocess_group(group_name: str):
     "preprocess the group: preparing the fast table and the task list; create log folder if not exists."
-    fast_table = FastTable().fill(group_name)
-    fast_table_file = os.path.join(GROUP_PATH, group_name, FAST_TABLE_FILE)
-    fast_table.dump_to_file(fast_table_file)
-    assert FastTable().load_from_file(fast_table_file) == fast_table
+    # fast_table = FastTable().fill(group_name)
+    # fast_table_file = os.path.join(GROUP_PATH, group_name, FAST_TABLE_FILE)
+    # fast_table.dump_to_file(fast_table_file)
+    # assert FastTable().load_from_file(fast_table_file) == fast_table
 
-    task_list = TaskList().create(group_name, fast_table)
+    # task_list = TaskList().create(group_name, fast_table)
+    task_list = TaskList().create_alt_alt_alt(group_name)
     task_list_file = os.path.join(GROUP_PATH, group_name, TASK_FILE)
     task_list.dump_to_file(task_list_file)
     assert TaskList().load_from_file(task_list_file) == task_list
@@ -360,10 +415,17 @@ def execute(worker_index: int):
     return
 
 
+def clean_up():
+    "clean up temporary files."
+    assert os.getcwd() == os.path.expanduser("~/src/hls_bench/vivado_evaluator")
+    os.system("rm *.v *.aig *.txt *.btor2 *temp*")
+
+
 # The following are the main functions for the user to use. Function names are "prefix matched".
 # - def preprocess_group(group_name: str)
 # - def execute(worker_index: int)
 # - def backup_newest_experiment_data()
+# - def clean_up()
 if __name__ == "__main__":
     func = sys.argv[1]
     if func.startswith("p"):
@@ -374,5 +436,7 @@ if __name__ == "__main__":
         execute(int(worker_index))
     elif func.startswith("b"):
         backup_newest_experiment_data()
+    elif func.startswith("c"):
+        clean_up()
     else:
         raise ValueError(f"Unknown function {func}")

@@ -2,14 +2,14 @@ import verilog_processing as vp
 import config
 import os
 
-def inspect_benchmark(v_file: str) -> tuple[int, int, int]:
+def inspect_benchmark_btor2(v_file: str) -> tuple[int, int, int]:
     temp_v = "inspect_temp.v"
     temp_btor2 = "inspect_temp.btor2"
 
     src = vp.VerilogFile()
     src.read_from_file(v_file)
     t1 = vp.merge_valid_signals(src)
-    t2 = vp.remove_reset_signal(t1)
+    t2 = vp.remove_reset_signal(t1, False)
     t3 = vp.remove_nondeterminism(t2)
     dst = vp.split_fsm_into_bits(t3)
     dst.write_to_file(temp_v)
@@ -74,6 +74,33 @@ def inspect_benchmark(v_file: str) -> tuple[int, int, int]:
     return btor2_node_count, bit_var_count, word_var_count
 
 
+from verilog_processing import change_vivado_width_with_config
+def inspect_benchmark_aiger(v_file: str, bit_length: int, config_file: str) -> tuple[int, int]:
+    "Returns the number of aiger nodes & flip flops"
+    temp_v = "inspect_temp.v"
+    temp_aig = "inspect_temp.aig"
+    change_vivado_width_with_config(v_file, temp_v, 4, bit_length, config_file)
+
+    yosys_commands = [
+        f"read_verilog {temp_v}",
+        f"synth",
+        "flatten",
+        "aigmap",
+        f"write_aiger -ascii {temp_aig}",
+    ]
+    if os.system(f"{config.YOSYS_CMD} -q -p '{'; '.join(yosys_commands)}'") != 0:
+        raise RuntimeError("Yosys failed.")
+
+    with open(temp_aig, "r") as f:
+        line = f.readline()
+    _, _, _, latch_count_token, _, and_gate_count_token = line.strip().split()
+
+    for file in [temp_v, temp_aig]:
+        if os.path.exists(file):
+            os.remove(file)
+    return int(and_gate_count_token), int(latch_count_token)
+
+
 def print_folder_benchmark_stats(folder: str) -> None:
     class MaxMin:
         mx: int
@@ -86,17 +113,28 @@ def print_folder_benchmark_stats(folder: str) -> None:
             self.mn = min(val, self.mn)
 
     node_mm, bit_mm, word_mm = MaxMin(), MaxMin(), MaxMin()
+    ag_mm, ff_mm = MaxMin(), MaxMin()
+
+    assert folder.endswith("/bench")
+    changer_config_path = os.path.join(folder.replace("/bench", ""), "changer_config.py")
     for v_basename in sorted(os.listdir(folder)):
         if not v_basename.endswith(".v"):
             continue
         v_file = os.path.join(folder, v_basename)
-        btor2_node_count, bit_var_count, word_var_count = inspect_benchmark(v_file)
+        btor2_node_count, bit_var_count, word_var_count = inspect_benchmark_btor2(v_file)
+        for bit_width in [8, 16, 32]:
+            ag_count, ff_count = inspect_benchmark_aiger(v_file, bit_width, changer_config_path)
+            ag_mm.update(ag_count)
+            ff_mm.update(ff_count)
+            print(f"[{bit_width}: {ag_count}, {ff_count}]", end=" ")
         print("name/node/bitvar/wordvar:", v_basename, btor2_node_count, bit_var_count, word_var_count)
         for mm, v in zip([node_mm, bit_mm, word_mm], [btor2_node_count, bit_var_count, word_var_count]):
             mm.update(v)
     print(f"node count range: {node_mm.mn} to {node_mm.mx}")
     print(f"bit var count range: {bit_mm.mn} to {bit_mm.mx}")
     print(f"word var count range: {word_mm.mn} to {word_mm.mx}")
+    print(f"and gate count range: {ag_mm.mn} to {ag_mm.mx}")
+    print(f"ff count range: {ff_mm.mn} to {ff_mm.mx}")
 
 
 class InstanceResult:
@@ -106,6 +144,7 @@ class InstanceResult:
     evaluator_name: str
     word_width: int
     completed: bool
+    invalid: bool
     # if not `self.completed`, the following fields till end are UB:
     time_spent: float
     # if `self.evaluator_name` is not ours, the following fields till end are UB:
@@ -114,6 +153,7 @@ class InstanceResult:
     sat_query_count: int
 
     def from_log(self, log_path: str) -> "InstanceResult":
+        self.invalid = False
         path_segments = os.path.normpath(log_path).split(os.path.sep)
         self.group_name, log_folder, log_basename = path_segments[-3:]
         assert log_folder == "log" and log_basename.endswith(".log")
@@ -125,7 +165,9 @@ class InstanceResult:
             log_text = f.read()
         self._read_final_result(log_text)
         if self.evaluator_name.startswith("word") and self.completed:
-            self._read_stats(log_text)
+            if not self._read_stats(log_text):
+                self.completed = False  # non-equivalent, invalid
+                self.invalid = True
         return self
 
     def _read_final_result(self, log_text: str):
@@ -134,13 +176,20 @@ class InstanceResult:
         if "Failure" in exit_code_line:
             self.completed = False
         elif "Success" in exit_code_line:
-            self.completed = True
-            _, _, time_str, _ = time_line.strip().split()
-            self.time_spent = float(time_str)
+            if "out of memory" in log_text:
+                self.completed = False
+            else:
+                self.completed = True
+                self.invalid = False
+                _, _, time_str, _ = time_line.strip().split()
+                self.time_spent = float(time_str)
         else:
             raise ValueError(f"Unexpected exit_code_line: {exit_code_line}")
 
-    def _read_stats(self, log_text: str):
+    def _read_stats(self, log_text: str) -> bool:
+        if "Equivalent." not in log_text:
+            assert "Nonequivalent." in log_text
+            return False
         lines = [l.strip() for l in log_text.splitlines()]
         for line in lines:
             if line.startswith("# net clauses: "):
@@ -150,12 +199,14 @@ class InstanceResult:
             elif line.startswith("TOTAL = "):
                 self.sat_query_count = int(line.split()[-1])
         assert all(x > 0 for x in [self.net_clause_count, self.frame_count, self.sat_query_count])
+        return True
 
     def from_merged(self, l: "InstanceResult", r: "InstanceResult", virtual_name: str) -> "InstanceResult":
         "Merge two results for a 'virtual solver', where the shorter-time run gets dominated."
         assert l.group_name == r.group_name
         assert {l.verilog_1_basename, l.verilog_2_basename} == {r.verilog_1_basename, r.verilog_2_basename}
         assert l.word_width == r.word_width
+        self.invalid = False
         self.group_name = l.group_name
         self.verilog_1_basename = l.verilog_1_basename
         self.verilog_2_basename = l.verilog_2_basename
@@ -169,11 +220,15 @@ class InstanceResult:
             self.completed = False
         else:
             self.completed = True
+            self.invalid = False
             self.time_spent = better.time_spent
             self.frame_count = better.frame_count
             self.net_clause_count = better.net_clause_count
             self.sat_query_count = better.sat_query_count
         return self
+
+
+# def summarize_group_as_instances()
 
 
 class PerformanceSummarizer:
@@ -185,8 +240,29 @@ class PerformanceSummarizer:
 
 
 if __name__ == "__main__":
-    log_dir = "../guannan/exp_2/gcd/log/"
-    for log_file in sorted(os.listdir(log_dir)):
-        log_path = os.path.join(log_dir, log_file)
-        result = InstanceResult().from_log(log_path)
-        print(result.__dict__)
+    group_names = ["kalman"] #os.listdir("../guannan/exp_2")
+    counter = {}
+    for group_name in group_names:
+        log_dir = os.path.join("../guannan/exp_2", group_name, "log")
+        for log_file in sorted(os.listdir(log_dir)):
+            try:
+                log_path = os.path.join(log_dir, log_file)
+                result = InstanceResult().from_log(log_path)
+                # print(result.__dict__)
+                if result.completed:
+                    key = (result.evaluator_name, result.word_width)
+                    value = counter.get(key, set())
+                    value.add(tuple(sorted((result.verilog_1_basename, result.verilog_2_basename))))
+                    counter[key] = value
+            except Exception as e:
+                print(f"Failed to parse {log_file}: {e}")
+        for bit in [8, 16, 32]:
+            counter[("word-union", bit)] = counter.get(("word-fast", bit), set()) | counter.get(("word-even", bit), set())
+            # counter[("word-intersect", bit)] = counter.get(("word-fast", bit), set()) & counter.get(("word-even", bit), set())
+    # print({k: len(v) for k, v in counter.items()})
+    for k, v in sorted(counter.items()):
+        # if k[0] == "nuxmv":
+            print(f"{k}: {len(v)}")
+    # for group_name in sorted(os.listdir("../guannan/exp_2")):
+    #     print_folder_benchmark_stats(os.path.join("../guannan/exp_2", group_name, "bench"))
+    # print_folder_benchmark_stats("../guannan/exp_2/kalman/bench")
